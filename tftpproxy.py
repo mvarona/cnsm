@@ -26,6 +26,8 @@ ATTACK_TWICE_ACK = 9
 ATTACK_UNAGREED_TID = 10
 
 FILE_NONEXISTENT = "nonexistent.txt"
+FILE_FORBIDDEN = "forbidden.txt"
+OP_NONEXISTENT = 15
 
 # Functions:
 
@@ -35,8 +37,8 @@ def showInitialMenu():
 	print("")
 	print("#\tError scenario\t\tExpected result")
 	print("")
-	print("1\tFile not found\t\tReturn error code 1")
-	print("2\tAccess violation\tReturn error code 2")
+	print("1\tFile not found (RRQ)\t\tReturn error code 1")
+	print("2\tAccess violation (WRQ)\tReturn error code 2")
 	print("3\tIllegal TFTP op.\tReturn error code 4")
 	print("4\tUnknown TID\t\tReturn error code 5")
 	print("5\tFile already exists\tReturn error code 6")
@@ -67,6 +69,16 @@ def chooseAttack():
 
 def applyModRequest(packet, chosenAttack):
 	if chosenAttack == ATTACK_FILE_NOT_FOUND:
+		packet.filename = FILE_NONEXISTENT
+		print(f"altered filename = {packet.filename}")
+
+	if chosenAttack == ATTACK_ACCESS_VIOLATION:
+		packet.filename = FILE_FORBIDDEN
+		print(f"altered filename = {packet.filename}")
+
+	if chosenAttack == ATTACK_ILLEGAL_OP:
+		packet.op = OP_NONEXISTENT
+		print(f"altered op = {packet.op}")
 
 	return packet
 
@@ -78,7 +90,7 @@ tftp_server_address = (IP_SERVER, TFTP_PORT)
 
 # Entry point:
 
-	chosenAttack = chooseAttack()
+chosenAttack = chooseAttack()
 
 # Infinite loop to receive and process messages:
 
@@ -95,7 +107,7 @@ while True:
 
 	request_mod = TFTP(request)
 
-	if chosenAttack == ATTACK_FILE_NOT_FOUND:
+	if chosenAttack == ATTACK_FILE_NOT_FOUND or chosenAttack == ATTACK_ACCESS_VIOLATION or chosenAttack == ATTACK_ILLEGAL_OP:
 		request_mod = applyModRequest(request_mod, chosenAttack)
 
 	request_mod_bytes = bytes(request_mod)
