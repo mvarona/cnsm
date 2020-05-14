@@ -11,14 +11,54 @@ POS_OPCODE = 1 # According to RFC 1350, the OPCODE is on the second position (1 
 OPCODE_READING = 1
 OPCODE_WRITING = 2
 BUFFER_TFTP = 1024
+MIN_ATTACK_NUM = 1
+MAX_ATTACK_NUM = 10
 
 # Functions:
 
+def showInitialMenu():
+	print("* Welcome to tftpproxuy *")
+	print("Please, choose one of the following attacks to be carried out:")
+	print("")
+	print("Attack number\tError scenario\tExpected result")
+	print("")
+	print("1\tFile not found\tReturn error code 1")
+	print("2\tAccess violation\tReturn error code 2")
+	print("3\tIllegal TFTP op.\tReturn error code 4")
+	print("4\tUnknown TID\tReturn error code 5")
+	print("5\tFile already exists\tReturn error code 6")
+	print("6\tDrop data packet\tClient retransmits request")
+	print("7\tDrop ACK client\tServer retransmits last byte")
+	print("8\tDrop error packet\tConnection finished")
+	print("9\tSend ACK twice\tSecond ACK is ignored")
+	print("10\tUnagreed source TID\tServer may or may not inform")
+	print("")
+	
+	chosenAttack = input("Chosen attack number: ")
 
+	return chosenAttack
+
+def chooseAttack():
+	chosenAttackError = true
+	while chosenAttackError:
+		chosenAttack = showInitialMenu()
+
+		try:
+			chosenAttack = int(chosenAttack)
+			if not chosenAttack >= MIN_ATTACK_NUM <= MAX_ATTACK_NUM
+				chosenAttackError = false
+		except ValueError:
+			print("Please, introduce a valid number")
+
+	return chosenAttack
 
 server_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 server_socket.bind((IP_PROXY, TFTP_PORT))
 tftp_server_address = (IP_SERVER, TFTP_PORT)
+
+# Entry point:
+
+	chosenAttack = chooseAttack()
 
 # Infinite loop to receive and process messages:
 
