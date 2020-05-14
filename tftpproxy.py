@@ -17,20 +17,20 @@ MAX_ATTACK_NUM = 10
 # Functions:
 
 def showInitialMenu():
-	print("* Welcome to tftpproxuy *")
+	print("*** Welcome to tftpproxy ***")
 	print("Please, choose one of the following attacks to be carried out:")
 	print("")
-	print("Attack number\tError scenario\tExpected result")
+	print("#\tError scenario\t\tExpected result")
 	print("")
-	print("1\tFile not found\tReturn error code 1")
+	print("1\tFile not found\t\tReturn error code 1")
 	print("2\tAccess violation\tReturn error code 2")
 	print("3\tIllegal TFTP op.\tReturn error code 4")
-	print("4\tUnknown TID\tReturn error code 5")
+	print("4\tUnknown TID\t\tReturn error code 5")
 	print("5\tFile already exists\tReturn error code 6")
 	print("6\tDrop data packet\tClient retransmits request")
-	print("7\tDrop ACK client\tServer retransmits last byte")
+	print("7\tDrop ACK client\t\tServer retransmits last byte")
 	print("8\tDrop error packet\tConnection finished")
-	print("9\tSend ACK twice\tSecond ACK is ignored")
+	print("9\tSend ACK twice\t\tSecond ACK is ignored")
 	print("10\tUnagreed source TID\tServer may or may not inform")
 	print("")
 	
@@ -39,14 +39,14 @@ def showInitialMenu():
 	return chosenAttack
 
 def chooseAttack():
-	chosenAttackError = true
+	chosenAttackError = True
 	while chosenAttackError:
 		chosenAttack = showInitialMenu()
 
 		try:
 			chosenAttack = int(chosenAttack)
-			if not chosenAttack >= MIN_ATTACK_NUM <= MAX_ATTACK_NUM
-				chosenAttackError = false
+			if chosenAttack in range(MIN_ATTACK_NUM, MAX_ATTACK_NUM + 1):
+				chosenAttackError = False
 		except ValueError:
 			print("Please, introduce a valid number")
 

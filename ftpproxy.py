@@ -10,6 +10,8 @@ IP_SERVER = "192.168.30.90"
 INTERFACE_NETWORK_PROXY = "enp0s3.30"
 BUFFER_FTP = 1024
 FTP_PASSV_SERVER_CODE = "227" #FTP sends status code 227 in response to a passive request from client
+MIN_ATTACK_NUM = 1
+MAX_ATTACK_NUM = 10
 
 # Functions:
 
@@ -21,6 +23,47 @@ def send(socket, msg):
 	recv = socket.recv(BUFFER_FTP)
 	print("<===receive: " + str(recv))
 	return recv
+
+def showInitialMenu():
+	print("*** Welcome to ftpproxuy ***")
+	print("Please, choose one of the following attacks to be carried out:")
+	print("")
+	print("#\tError scenario\t\tExpected result")
+	print("")
+	print("1\tFile not found on get\t\tReturn error code 550")
+	print("2\tFile not found on put\tReturn error code 550")
+	print("3\tUnknown command\tReturn error code 500")
+	print("4\tSyntax error in parameter\t\tReturn error code 501")
+	print("5\tChange username\tReturn error code 530")
+	print("6\tDrop ACK packet handshake\tConnection timed out")
+	print("7\tDrop ACK packet\t\tLast client-packet retransmitted")
+	print("8\tDrop server packet\tLast server-packet retransmitted")
+	print("9\tDuplicate ACK\t\tDo nothing")
+	print("10\tTriplicate ACK\tResend following packet")
+	print("")
+	
+	chosenAttack = input("Chosen attack number: ")
+
+	return chosenAttack
+
+def chooseAttack():
+	chosenAttackError = True
+	while chosenAttackError:
+		chosenAttack = showInitialMenu()
+
+		try:
+			chosenAttack = int(chosenAttack)
+			if chosenAttack in range(MIN_ATTACK_NUM, MAX_ATTACK_NUM + 1):
+				chosenAttackError = False
+		except ValueError:
+			print("Please, introduce a valid number")
+
+	return chosenAttack
+
+
+# Entry point:
+
+chosenAttack = chooseAttack()
 
 #Create the socket to listen on 192.168.40.80:21
 server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
