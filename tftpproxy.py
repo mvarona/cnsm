@@ -11,8 +11,21 @@ POS_OPCODE = 1 # According to RFC 1350, the OPCODE is on the second position (1 
 OPCODE_READING = 1
 OPCODE_WRITING = 2
 BUFFER_TFTP = 1024
+
 MIN_ATTACK_NUM = 1
 MAX_ATTACK_NUM = 10
+ATTACK_FILE_NOT_FOUND = 1
+ATTACK_ACCESS_VIOLATION = 2
+ATTACK_ILLEGAL_OP = 3
+ATTACK_UNKNOWN_TID = 4
+ATTACK_FILE_EXISTS = 5
+ATTACK_DROP_PACKET = 6
+ATTACK_DROP_ACK = 7
+ATTACK_DROP_ERROR = 8
+ATTACK_TWICE_ACK = 9
+ATTACK_UNAGREED_TID = 10
+
+FILE_NONEXISTENT = "nonexistent.txt"
 
 # Functions:
 
@@ -52,6 +65,13 @@ def chooseAttack():
 
 	return chosenAttack
 
+def applyModRequest(packet, chosenAttack):
+	if chosenAttack == ATTACK_FILE_NOT_FOUND:
+
+	return packet
+
+
+
 server_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 server_socket.bind((IP_PROXY, TFTP_PORT))
 tftp_server_address = (IP_SERVER, TFTP_PORT)
@@ -74,6 +94,10 @@ while True:
 	request, client_address = server_socket.recvfrom(BUFFER_TFTP)
 
 	request_mod = TFTP(request)
+
+	if chosenAttack == ATTACK_FILE_NOT_FOUND:
+		request_mod = applyModRequest(request_mod, chosenAttack)
+
 	request_mod_bytes = bytes(request_mod)
 
 	if request[POS_OPCODE] == OPCODE_READING:
