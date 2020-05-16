@@ -41,6 +41,7 @@ while True:
 			tftp_data_packet, temp_server_address = fw_proxy_server.recvfrom(1024)
 
 			tftp_data_packet = TFTP(tftp_data_packet)
+			tftp_data_packet.show()
 
 			size = len(tftp_data_packet.load)
 			print(size)
