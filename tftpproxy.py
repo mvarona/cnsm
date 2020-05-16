@@ -48,8 +48,8 @@ def showInitialMenu():
 	print("4\tChange UDP dest. port\tServer accepts new port")
 	print("5\tFile not found (WRQ)\tReturn error code 1")
 	print("6\tDrop client packet\tClient retransmits request")
-	print("7\tDrop ACK client (RRQ)\t\tServer retransmits last byte")
-	print("8\tDrop error packet (RRQ)\tClient retries request")
+	print("7\tDrop ACK client (RRQ)\tServer retransmits last byte")
+	print("8\tDrop error packet\tClient retries request")
 	print("9\tSend ACK twice\t\tSecond ACK is ignored")
 	print("10\tModify file text\tOther part accepts text")
 	print("")
@@ -73,7 +73,7 @@ def chooseAttack():
 	return chosenAttack
 
 def applyModRequest(packet, chosenAttack):
-	if chosenAttack == ATTACK_FILE_NOT_FOUND or chosenAttack == ATTACK_DROP_ERROR:
+	if chosenAttack == ATTACK_FILE_NOT_FOUND or chosenAttack == ATTACK_FILE_NOT_FOUND_WRQ or chosenAttack == ATTACK_DROP_ERROR:
 		packet.filename = FILE_NONEXISTENT
 		print(f"altered filename = {packet.filename}")
 
@@ -92,10 +92,6 @@ def applyModRequest(packet, chosenAttack):
 		print(f"altered destination port = {packetUDP.dport}")
 		packetResult = TFTP(packet)/UDP(packetUDP)
 		return packetResult
-
-	if chosenAttack == ATTACK_FILE_NOT_FOUND_WRQ:
-		packet.filename = FILE_NONEXISTENT
-		print(f"altered filename = {packet.filename}")
 
 	if chosenAttack == ATTACK_CHANGE_TXT:
 		packet.load = TEXT_CHANGED
@@ -244,28 +240,27 @@ while True:
 		ack_server_mod = TFTP(ack_packet)
 		ack_server_mod_bytes = bytes(ack_server_mod)
 
-		print(f"Received ACK from the Server: Server = {temp_server_address} | Data = {ack_server_mod_bytes}")
+		print(f"Received ACK/error from the Server: Server = {temp_server_address} | Data = {ack_server_mod_bytes}")
 
-		if not (chosenAttack == ATTACK_DROP_ACK):
+		if not chosenAttack == ATTACK_DROP_ERROR:
 			fw_proxy_client.sendto(ack_server_mod_bytes, client_address)
-			print(f"Forwarding ack to the Client: Client = {client_address}")
+			print(f"Forwarding ack/error to the Client: Client = {client_address}")
 		else:
-			print(f"Omitting forwarding to the Server")
-			print(f"Waiting for re-sending of last byte from client")
+			print(f"Omitting forwarding to the Client")
+			print(f"Waiting for re-sending from client")
 			request, client_address = server_socket.recvfrom(BUFFER_TFTP)
 			request_mod = TFTP(request)
-			request_mod_bytes = bytes(request_mod)
 			print(f"Received WRQ from the Client: Client = {client_address} | Data = {request_mod_bytes}")
+			request_mod = applyModRequest(request_mod, chosenAttack)
+			request_mod_bytes = bytes(request_mod)
 			fw_proxy_server.sendto(request_mod_bytes, tftp_server_address)
 			print(f"Forwarding wrq to the Server: Server = {tftp_server_address}")
 			ack_packet, temp_server_address = fw_proxy_server.recvfrom(BUFFER_TFTP)
 			ack_server_mod = TFTP(ack_packet)
 			ack_server_mod_bytes = bytes(ack_server_mod)
-			print(f"Received ACK from the Server: Server = {temp_server_address} | Data = {ack_server_mod_bytes}")
-			fw_proxy_client.sendto(ack_server_mod_bytes, client_address)
-			print(f"Forwarding ack to the Client: Client = {client_address}")
+			print(f"Received ACK/error from the Server: Server = {temp_server_address} | Data = {ack_server_mod_bytes}")
 
-		if not (chosenAttack == ATTACK_ACCESS_VIOLATION or chosenAttack == ATTACK_FILE_NOT_FOUND_WRQ):
+		if not (chosenAttack == ATTACK_ACCESS_VIOLATION or chosenAttack == ATTACK_FILE_NOT_FOUND_WRQ or ATTACK_DROP_ERROR):
 
 			datapacket, clientaddress = fw_proxy_client.recvfrom(BUFFER_TFTP)
 
