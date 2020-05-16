@@ -42,12 +42,12 @@ def showInitialMenu():
 	print("#\tError scenario\t\tExpected result")
 	print("")
 	print("0\tNo error\t\tNormal working")
-	print("1\tFile not found (RRQ)\t\tReturn error code 1")
+	print("1\tFile not found (RRQ)\tReturn error code 1")
 	print("2\tAccess violation (WRQ)\tReturn error code 2")
 	print("3\tIllegal TFTP op.\tServer discards request")
 	print("4\tChange UDP dest. port\tServer accepts new port")
 	print("5\tFile not found (WRQ)\tReturn error code 1")
-	print("6\tDrop client packet (RRQ)\tClient retransmits request")
+	print("6\tDrop client packet\tClient retransmits request")
 	print("7\tDrop ACK client (RRQ)\t\tServer retransmits last byte")
 	print("8\tDrop error packet (RRQ)\tClient retries request")
 	print("9\tSend ACK twice\t\tSecond ACK is ignored")
@@ -255,9 +255,20 @@ while True:
 			datapacket_client_mod = TFTP(datapacket)
 			datapacket_client_mod_bytes = bytes(datapacket_client_mod)
 
-			fw_proxy_server.sendto(datapacket_client_mod_bytes, temp_server_address)
-			print(f"Received Data-Packet from Client: Client = {clientaddress} | Data = {datapacket_client_mod_bytes}")
-			print(f"Forwarding data to the Server: Server = {temp_server_address}")
+			print(f"Received ack from Client: Client = {clientaddress} | Ack = {datapacket_client_mod_bytes}")
+
+			if not (chosenAttack == ATTACK_DROP_ACK):
+				fw_proxy_server.sendto(datapacket_client_mod_bytes, temp_server_address)	
+				print(f"Forwarding ack to the Server: Server = {temp_server_address}")
+			else:
+				print(f"Omitting forwarding to the Server")
+				print(f"Waiting for the re-sending of the ack from client")
+				datapacket, clientaddress = fw_proxy_client.recvfrom(BUFFER_TFTP)
+				datapacket_client_mod = TFTP(datapacket)
+				datapacket_client_mod_bytes = bytes(datapacket_client_mod)
+				print(f"Received ack from Client: Client = {clientaddress} | Ack = {datapacket_client_mod_bytes}")
+				fw_proxy_server.sendto(datapacket_client_mod_bytes, temp_server_address)
+				print(f"Forwarding ack to the Server: Server = {temp_server_address}")
 
 			ack_packet, temp_server_address = fw_proxy_server.recvfrom(BUFFER_TFTP)
 
