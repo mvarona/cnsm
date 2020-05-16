@@ -267,6 +267,10 @@ while True:
 			datapacket, clientaddress = fw_proxy_client.recvfrom(BUFFER_TFTP)
 
 			datapacket_client_mod = TFTP(datapacket)
+
+			if chosenAttack == ATTACK_CHANGE_TXT:
+				datapacket_client_mod = applyModRequest(datapacket_client_mod, ATTACK_CHANGE_TXT)
+
 			datapacket_client_mod_bytes = bytes(datapacket_client_mod)
 
 			fw_proxy_server.sendto(datapacket_client_mod_bytes, temp_server_address)
