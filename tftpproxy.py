@@ -44,8 +44,8 @@ def showInitialMenu():
 	print("3\tIllegal TFTP op.\tServer discards request")
 	print("4\tChange UDP dest. port\tServer accepts new port")
 	print("5\tFile not found (WRQ)\tReturn error code 1")
-	print("6\tDrop client packet\tClient retransmits request")
-	print("7\tDrop ACK client\t\tServer retransmits last byte")
+	print("6\tDrop client packet (RRQ)\tClient retransmits request")
+	print("7\tDrop ACK client (RRQ)\t\tServer retransmits last byte")
 	print("8\tDrop error packet\tConnection finished")
 	print("9\tSend ACK twice\t\tSecond ACK is ignored")
 	print("10\tUnagreed source TID\tServer may or may not inform")
@@ -164,9 +164,30 @@ while True:
 		ack_server_mod = TFTP(ack_packet)
 		ack_server_mod_bytes = bytes(ack_server_mod)
 
-		fw_proxy_server.sendto(ack_server_mod_bytes, temp_server_address)
-		print(f"Received ACK from the Client: Cient = {client_address} | Data = {ack_server_mod_bytes}")
-		print(f"Forwarding ack to the Server: Server = {temp_server_address}")
+		if not chosenAttack == ATTACK_DROP_ACK:
+			fw_proxy_server.sendto(ack_server_mod_bytes, temp_server_address)
+			print(f"Received ACK from the Client: Cient = {client_address} | Data = {ack_server_mod_bytes}")
+			print(f"Forwarding ack to the Server: Server = {temp_server_address}")
+
+		else:
+			print(f"Waiting for re-sending from server")
+			tftp_data_packet, temp_server_address = fw_proxy_server.recvfrom(BUFFER_TFTP)
+
+			data_server_mod = TFTP(tftp_data_packet)
+			data_server_mod_bytes = bytes(data_server_mod)
+
+			fw_proxy_client.sendto(data_server_mod_bytes, client_address)
+			print(f"Received data from Server: Server = {temp_server_address} | Data = {data_server_mod_bytes}")
+			print(f"Forwarding data to the Client: Client = {client_address}")
+
+			ack_server_mod = TFTP(ack_packet)
+			ack_server_mod_bytes = bytes(ack_server_mod)
+
+			fw_proxy_server.sendto(ack_server_mod_bytes, temp_server_address)
+			print(f"Received ACK from the Client: Cient = {client_address} | Data = {ack_server_mod_bytes}")
+			print(f"Forwarding ack to the Server: Server = {temp_server_address}")
+
+
 
 	elif request[POS_OPCODE] == OPCODE_WRITING:
 
