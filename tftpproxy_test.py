@@ -6,7 +6,7 @@ tftp_server_address = ("192.168.30.90", 69)
 
 while True:
 	fw_proxy_server = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-	fw_proxy_server.setsockopt(socket.SOL_SOCKET, 25, str("enpOs3.30" + '\O').encode('utf-8'))
+	fw_proxy_server.setsockopt(socket.SOL_SOCKET, 25, str("enp0s3.30" + '\O').encode('utf-8'))
 	fw_proxy_client = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 	#Waiting for a packet
 	print(f"Waiting for rrq/wrq from client")
