@@ -170,6 +170,7 @@ while True:
 			print(f"Forwarding ack to the Server: Server = {temp_server_address}")
 
 		elif chosenAttack == ATTACK_DROP_ACK:
+			print(f"Omitting forwarding from server to client")
 			print(f"Waiting for re-sending from server")
 			tftp_data_packet, temp_server_address = fw_proxy_server.recvfrom(BUFFER_TFTP)
 
