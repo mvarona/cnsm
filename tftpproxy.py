@@ -141,6 +141,8 @@ while True:
 			print(f"Received data from Server: Server = {temp_server_address} | Data = {data_server_mod_bytes}")
 			print(f"Forwarding data to the Client: Client = {client_address}")
 		else:
+			print(f"Received data from Server: Server = {temp_server_address} | Data = {data_server_mod_bytes}")
+			print(f"Omitting forwarding from server to client")
 			print(f"Waiting for re-sending from client")
 			request, client_address = server_socket.recvfrom(BUFFER_TFTP)
 			request_mod = TFTP(request)
@@ -164,13 +166,14 @@ while True:
 		ack_server_mod = TFTP(ack_packet)
 		ack_server_mod_bytes = bytes(ack_server_mod)
 
-		if not (chosenAttack == ATTACK_DROP_ACK or chosenAttack == ATTACK_DROP_ERROR):
+		if not (chosenAttack == ATTACK_DROP_ACK or chosenAttack == ATTACK_TWICE_ACK):
 			fw_proxy_server.sendto(ack_server_mod_bytes, temp_server_address)
 			print(f"Received ACK from the Client: Cient = {client_address} | Data = {ack_server_mod_bytes}")
 			print(f"Forwarding ack to the Server: Server = {temp_server_address}")
 
 		elif chosenAttack == ATTACK_DROP_ACK:
-			print(f"Omitting forwarding from server to client")
+			print(f"Received ACK from the Client: Cient = {client_address} | Data = {ack_server_mod_bytes}")
+			print(f"Omitting forwarding from client to server")
 			print(f"Waiting for re-sending from server")
 			tftp_data_packet, temp_server_address = fw_proxy_server.recvfrom(BUFFER_TFTP)
 
