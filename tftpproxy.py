@@ -262,7 +262,7 @@ while True:
 			fw_proxy_client.sendto(ack_server_mod_bytes, client_address)
 			print(f"Forwarding ack/error to the Client: Client = {client_address}")
 
-		if not (chosenAttack == ATTACK_ACCESS_VIOLATION or chosenAttack == ATTACK_FILE_NOT_FOUND_WRQ or ATTACK_DROP_ERROR):
+		if not (chosenAttack == ATTACK_ACCESS_VIOLATION or chosenAttack == ATTACK_FILE_NOT_FOUND_WRQ or chosenAttack == ATTACK_DROP_ERROR):
 
 			datapacket, clientaddress = fw_proxy_client.recvfrom(BUFFER_TFTP)
 
