@@ -46,7 +46,7 @@ def showInitialMenu():
 	print("5\tFile not found (WRQ)\tReturn error code 1")
 	print("6\tDrop client packet (RRQ)\tClient retransmits request")
 	print("7\tDrop ACK client (RRQ)\t\tServer retransmits last byte")
-	print("8\tDrop error packet\tClient retries request")
+	print("8\tDrop error packet (RRQ)\tClient retries request")
 	print("9\tSend ACK twice\t\tSecond ACK is ignored")
 	print("10\tUnagreed source TID\tServer may or may not inform")
 	print("")
@@ -210,6 +210,7 @@ while True:
 				fw_proxy_client.sendto(data_server_mod_bytes, client_address)
 				print(f"Received data from Server: Server = {temp_server_address} | Data = {data_server_mod_bytes}")
 				print(f"Forwarding data to the Client: Client = {client_address}")
+				
 
 
 
