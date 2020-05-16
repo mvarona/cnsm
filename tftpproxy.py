@@ -142,8 +142,8 @@ while True:
 
 		data_server_mod = TFTP(tftp_data_packet)
 
-		if not (chosenAttack == ATTACK_CHANGE_TXT):
-			data_server_mod = applyModRequest(ATTACK_CHANGE_TXT)
+		if chosenAttack == ATTACK_CHANGE_TXT:
+			data_server_mod = applyModRequest(data_server_mod, ATTACK_CHANGE_TXT)
 
 		data_server_mod_bytes = bytes(data_server_mod)
 
