@@ -146,6 +146,10 @@ while True:
 			print(f"Waiting for re-sending from client")
 			request, client_address = server_socket.recvfrom(BUFFER_TFTP)
 			request_mod = TFTP(request)
+
+			if chosenAttack == ATTACK_DROP_ERROR:
+				request_mod = applyModRequest(request_mod, chosenAttack)
+
 			request_mod_bytes = bytes(request_mod)
 
 			fw_proxy_server.sendto(request_mod_bytes, tftp_server_address)
