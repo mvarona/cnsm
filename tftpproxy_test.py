@@ -42,9 +42,8 @@ while True:
 
 			tftp_data_packet = TFTP(tftp_data_packet)
 			print("LOOK HERE")
-			tftp_data_packet.show()
-
-			if (tftp_data_packet.op != "DATA"):
+			
+			if not (tftp_data_packet.load is None):
 				size = len(tftp_data_packet.load)
 				print(size)
 			else:
