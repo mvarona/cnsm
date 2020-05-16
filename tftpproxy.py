@@ -241,8 +241,26 @@ while True:
 		ack_server_mod_bytes = bytes(ack_server_mod)
 
 		print(f"Received ACK/error from the Server: Server = {temp_server_address} | Data = {ack_server_mod_bytes}")
-		fw_proxy_client.sendto(ack_server_mod_bytes, client_address)
-		print(f"Forwarding ack/error to the Client: Client = {client_address}")
+
+		if not chosenAttack == ATTACK_DROP_ERROR:
+			fw_proxy_client.sendto(ack_server_mod_bytes, client_address)
+			print(f"Forwarding ack/error to the Client: Client = {client_address}")
+		else:
+			print(f"Omitting forwarding to the Client")
+			print(f"Waiting for re-sending from client")
+			request, client_address = server_socket.recvfrom(BUFFER_TFTP)
+			request_mod = TFTP(request)
+			print(f"Received WRQ from the Client: Client = {client_address} | Data = {request_mod_bytes}")
+			request_mod = applyModRequest(request_mod, chosenAttack)
+			request_mod_bytes = bytes(request_mod)
+			fw_proxy_server.sendto(request_mod_bytes, tftp_server_address)
+			print(f"Forwarding wrq to the Server: Server = {tftp_server_address}")
+			ack_packet, temp_server_address = fw_proxy_server.recvfrom(BUFFER_TFTP)
+			ack_server_mod = TFTP(ack_packet)
+			ack_server_mod_bytes = bytes(ack_server_mod)
+			print(f"Received ACK/error from the Server: Server = {temp_server_address} | Data = {ack_server_mod_bytes}")
+			fw_proxy_client.sendto(ack_server_mod_bytes, client_address)
+			print(f"Forwarding ack/error to the Client: Client = {client_address}")
 
 		if not (chosenAttack == ATTACK_ACCESS_VIOLATION or chosenAttack == ATTACK_FILE_NOT_FOUND_WRQ or ATTACK_DROP_ERROR):
 
