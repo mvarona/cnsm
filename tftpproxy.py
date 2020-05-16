@@ -207,7 +207,11 @@ while True:
 				print(f"Received second ACK from the Client: Cient = {client_address} | Data = {ack_server_mod_bytes}")
 				print(f"Forwarding second ack to the Server: Server = {temp_server_address}")
 
-				fw_proxy_client.sendto(data_server_mod_bytes, client_address)
+				tftp_data_packet, temp_server_address = fw_proxy_server.recvfrom(BUFFER_TFTP)
+
+				data_server_mod = TFTP(tftp_data_packet)
+				data_server_mod_bytes = bytes(data_server_mod)
+				
 				print(f"Received data from Server: Server = {temp_server_address} | Data = {data_server_mod_bytes}")
 				print(f"Forwarding data to the Client: Client = {client_address}")
 				
