@@ -229,7 +229,7 @@ while True:
 			if size < MAX_TRANSFER_TFTP:
 				
 				if chosenAttack == ATTACK_CHANGE_TXT:
-				data_server_mod = applyModRequest(data_server_mod, ATTACK_CHANGE_TXT)
+					data_server_mod = applyModRequest(data_server_mod, ATTACK_CHANGE_TXT)
 
 				data_server_mod_bytes = bytes(data_server_mod)
 
