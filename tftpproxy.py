@@ -29,7 +29,7 @@ ATTACK_CHANGE_TXT = 10
 
 FILE_NONEXISTENT = "nonexistent.txt"
 FILE_FORBIDDEN = "forbidden.txt"
-TEXT_CHANGED = "!!!THIS TEXT WAS ALTERED!!!"
+TEXT_CHANGED = "!!!THIS TEXT WAS ALTERED!!!\n"
 OP_NONEXISTENT = 1
 UDP_NEW_DPORT = 13
 
@@ -98,8 +98,8 @@ def applyModRequest(packet, chosenAttack):
 		print(f"altered filename = {packet.filename}")
 
 	if chosenAttack == ATTACK_CHANGE_TXT:
-		packet.block = TEXT_CHANGED
-		print(f"altered text = {packet.block}")
+		packet.load = TEXT_CHANGED
+		print(f"altered text = {packet.load}")
 
 	return packet
 
