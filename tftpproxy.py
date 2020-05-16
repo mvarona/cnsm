@@ -224,10 +224,19 @@ while True:
 
 	elif request[POS_OPCODE] == OPCODE_WRITING:
 
-		fw_proxy_server.sendto(request_mod_bytes, tftp_server_address)
-
 		print(f"Received WRQ from the Client: Client = {client_address} | Data = {request_mod_bytes}")
-		print(f"Forwarding wrq to the Server: Server = {tftp_server_address}")
+
+		if not (chosenAttack == ATTACK_DROP_PACKET):
+			fw_proxy_server.sendto(request_mod_bytes, tftp_server_address)
+			print(f"Forwarding wrq to the Server: Server = {tftp_server_address}")
+		else:
+			print(f"Omitting forwarding to the Server")
+			print(f"Waiting for re-sending from client")
+			request_mod = TFTP(request)
+			request_mod_bytes = bytes(request_mod)
+			print(f"Received WRQ from the Client: Client = {client_address} | Data = {request_mod_bytes}")
+			fw_proxy_server.sendto(request_mod_bytes, tftp_server_address)
+			print(f"Forwarding wrq to the Server: Server = {tftp_server_address}")
 
 		ack_packet, temp_server_address = fw_proxy_server.recvfrom(BUFFER_TFTP)
 
