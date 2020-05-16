@@ -262,6 +262,8 @@ while True:
 			ack_server_mod = TFTP(ack_packet)
 			ack_server_mod_bytes = bytes(ack_server_mod)
 			print(f"Received ACK from the Server: Server = {temp_server_address} | Data = {ack_server_mod_bytes}")
+			fw_proxy_client.sendto(ack_server_mod_bytes, client_address)
+			print(f"Forwarding ack to the Client: Client = {client_address}")
 
 		if not (chosenAttack == ATTACK_ACCESS_VIOLATION or chosenAttack == ATTACK_FILE_NOT_FOUND_WRQ):
 
