@@ -1,5 +1,6 @@
 import socket
 from scapy.all import *
+import time
 
 # Constants:
 
@@ -17,8 +18,8 @@ MAX_ATTACK_NUM = 10
 ATTACK_FILE_NOT_FOUND = 1
 ATTACK_ACCESS_VIOLATION = 2
 ATTACK_ILLEGAL_OP = 3
-ATTACK_UNKNOWN_TID = 4
-ATTACK_FILE_EXISTS = 5
+ATTACK_CHANGE_DPORT = 4
+ATTACK_FILE_NOT_FOUND_WRQ = 5
 ATTACK_DROP_PACKET = 6
 ATTACK_DROP_ACK = 7
 ATTACK_DROP_ERROR = 8
@@ -27,7 +28,8 @@ ATTACK_UNAGREED_TID = 10
 
 FILE_NONEXISTENT = "nonexistent.txt"
 FILE_FORBIDDEN = "forbidden.txt"
-OP_NONEXISTENT = 15
+OP_NONEXISTENT = 1
+UDP_NEW_DPORT = 13
 
 # Functions:
 
@@ -39,16 +41,16 @@ def showInitialMenu():
 	print("")
 	print("1\tFile not found (RRQ)\t\tReturn error code 1")
 	print("2\tAccess violation (WRQ)\tReturn error code 2")
-	print("3\tIllegal TFTP op.\tReturn error code 4")
-	print("4\tUnknown TID\t\tReturn error code 5")
-	print("5\tFile already exists\tReturn error code 6")
-	print("6\tDrop data packet\tClient retransmits request")
+	print("3\tIllegal TFTP op.\tServer discards request")
+	print("4\tChange UDP dest. port\tServer accepts new port")
+	print("5\tFile not found (WRQ)\tReturn error code 1")
+	print("6\tDrop client packet\tClient retransmits request")
 	print("7\tDrop ACK client\t\tServer retransmits last byte")
 	print("8\tDrop error packet\tConnection finished")
 	print("9\tSend ACK twice\t\tSecond ACK is ignored")
 	print("10\tUnagreed source TID\tServer may or may not inform")
 	print("")
-	
+
 	chosenAttack = input("Chosen attack number: ")
 
 	return chosenAttack
@@ -80,6 +82,18 @@ def applyModRequest(packet, chosenAttack):
 		packet.op = OP_NONEXISTENT
 		print(f"altered op = {packet.op}")
 
+	if chosenAttack == ATTACK_CHANGE_DPORT:
+		packetUDP = UDP(packet)
+		print(f"unaltered destination port = {packetUDP.dport}")
+		packetUDP.dport = UDP_NEW_DPORT
+		print(f"altered destination port = {packetUDP.dport}")
+		packetResult = TFTP(packet)/UDP(packetUDP)
+		return packetResult
+
+	if chosenAttack == ATTACK_FILE_NOT_FOUND_WRQ:
+		packet.filename = FILE_NONEXISTENT
+		print(f"altered filename = {packet.filename}")
+
 	return packet
 
 
@@ -107,7 +121,7 @@ while True:
 
 	request_mod = TFTP(request)
 
-	if chosenAttack == ATTACK_FILE_NOT_FOUND or chosenAttack == ATTACK_ACCESS_VIOLATION or chosenAttack == ATTACK_ILLEGAL_OP:
+	if chosenAttack == ATTACK_FILE_NOT_FOUND or chosenAttack == ATTACK_ACCESS_VIOLATION or chosenAttack == ATTACK_ILLEGAL_OP or chosenAttack == ATTACK_CHANGE_DPORT or chosenAttack == ATTACK_FILE_NOT_FOUND_WRQ:
 		request_mod = applyModRequest(request_mod, chosenAttack)
 
 	request_mod_bytes = bytes(request_mod)
@@ -122,9 +136,28 @@ while True:
 		data_server_mod = TFTP(tftp_data_packet)
 		data_server_mod_bytes = bytes(data_server_mod)
 
-		fw_proxy_client.sendto(data_server_mod_bytes, client_address)
-		print(f"Received data from Server: Server = {temp_server_address} | Data = {data_server_mod_bytes}")
-		print(f"Forwarding data to the Client: Client = {client_address}")
+		if not chosenAttack == ATTACK_DROP_PACKET:
+			fw_proxy_client.sendto(data_server_mod_bytes, client_address)
+			print(f"Received data from Server: Server = {temp_server_address} | Data = {data_server_mod_bytes}")
+			print(f"Forwarding data to the Client: Client = {client_address}")
+		else:
+			print(f"Waiting for re-sending from client")
+			request, client_address = server_socket.recvfrom(BUFFER_TFTP)
+			request_mod = TFTP(request)
+			request_mod_bytes = bytes(request_mod)
+
+			fw_proxy_server.sendto(request_mod_bytes, tftp_server_address)
+			print(f"Received RRQ from the Client: Client = {client_address} | Data = {request_mod_bytes}")
+			print(f"Forwarding rrq to the Server: Server = {tftp_server_address}")
+
+			tftp_data_packet, temp_server_address = fw_proxy_server.recvfrom(BUFFER_TFTP)
+
+			data_server_mod = TFTP(tftp_data_packet)
+			data_server_mod_bytes = bytes(data_server_mod)
+
+			fw_proxy_client.sendto(data_server_mod_bytes, client_address)
+			print(f"Received data from Server: Server = {temp_server_address} | Data = {data_server_mod_bytes}")
+			print(f"Forwarding data to the Client: Client = {client_address}")
 
 		ack_packet, client_address = fw_proxy_client.recvfrom(BUFFER_TFTP)
 
@@ -138,7 +171,7 @@ while True:
 	elif request[POS_OPCODE] == OPCODE_WRITING:
 
 		fw_proxy_server.sendto(request_mod_bytes, tftp_server_address)
-		
+
 		print(f"Received WRQ from the Client: Client = {client_address} | Data = {request_mod_bytes}")
 		print(f"Forwarding wrq to the Server: Server = {tftp_server_address}")
 
@@ -151,20 +184,22 @@ while True:
 		print(f"Received ACK from the Server: Server = {temp_server_address} | Data = {ack_server_mod_bytes}")
 		print(f"Forwarding ack to the Client: Client = {client_address}")
 
-		datapacket, clientaddress = fw_proxy_client.recvfrom(BUFFER_TFTP)
+		if not (chosenAttack == ATTACK_ACCESS_VIOLATION or chosenAttack == ATTACK_FILE_NOT_FOUND_WRQ):
 
-		datapacket_client_mod = TFTP(datapacket)
-		datapacket_client_mod_bytes = bytes(datapacket_client_mod)
+			datapacket, clientaddress = fw_proxy_client.recvfrom(BUFFER_TFTP)
 
-		fw_proxy_server.sendto(datapacket_client_mod_bytes, temp_server_address)
-		print(f"Received Data-Packet from Client: Client = {clientaddress} | Data = {datapacket_client_mod_bytes}")
-		print(f"Forwarding data to the Server: Server = {temp_server_address}")
+			datapacket_client_mod = TFTP(datapacket)
+			datapacket_client_mod_bytes = bytes(datapacket_client_mod)
 
-		ack_packet, temp_server_address = fw_proxy_server.recvfrom(BUFFER_TFTP)
+			fw_proxy_server.sendto(datapacket_client_mod_bytes, temp_server_address)
+			print(f"Received Data-Packet from Client: Client = {clientaddress} | Data = {datapacket_client_mod_bytes}")
+			print(f"Forwarding data to the Server: Server = {temp_server_address}")
 
-		ack_server_mod = TFTP(ack_packet)
-		ack_server_mod_bytes = bytes(ack_server_mod)
+			ack_packet, temp_server_address = fw_proxy_server.recvfrom(BUFFER_TFTP)
 
-		fw_proxy_client.sendto(ack_server_mod_bytes, client_address)
-		print(f"Received ACK from the Server: Server = {temp_server_address} | Data = {ack_server_mod_bytes}")
-		print(f"Forwarding ack to the Client: Client = {client_address}")
+			ack_server_mod = TFTP(ack_packet)
+			ack_server_mod_bytes = bytes(ack_server_mod)
+
+			fw_proxy_client.sendto(ack_server_mod_bytes, client_address)
+			print(f"Received ACK from the Server: Server = {temp_server_address} | Data = {ack_server_mod_bytes}")
+			print(f"Forwarding ack to the Client: Client = {client_address}")
