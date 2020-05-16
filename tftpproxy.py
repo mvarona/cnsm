@@ -13,8 +13,9 @@ OPCODE_READING = 1
 OPCODE_WRITING = 2
 BUFFER_TFTP = 1024
 
-MIN_ATTACK_NUM = 1
+MIN_ATTACK_NUM = 0
 MAX_ATTACK_NUM = 10
+ATTACK_NO_ATTACK = 0
 ATTACK_FILE_NOT_FOUND = 1
 ATTACK_ACCESS_VIOLATION = 2
 ATTACK_ILLEGAL_OP = 3
@@ -24,10 +25,11 @@ ATTACK_DROP_PACKET = 6
 ATTACK_DROP_ACK = 7
 ATTACK_DROP_ERROR = 8
 ATTACK_TWICE_ACK = 9
-ATTACK_UNAGREED_TID = 10
+ATTACK_CHANGE_TXT = 10
 
 FILE_NONEXISTENT = "nonexistent.txt"
 FILE_FORBIDDEN = "forbidden.txt"
+TEXT_CHANGED = "!!!THIS TEXT WAS ALTERED!!!"
 OP_NONEXISTENT = 1
 UDP_NEW_DPORT = 13
 
@@ -39,6 +41,7 @@ def showInitialMenu():
 	print("")
 	print("#\tError scenario\t\tExpected result")
 	print("")
+	print("0\tNo error\t\tNormal working")
 	print("1\tFile not found (RRQ)\t\tReturn error code 1")
 	print("2\tAccess violation (WRQ)\tReturn error code 2")
 	print("3\tIllegal TFTP op.\tServer discards request")
@@ -48,7 +51,7 @@ def showInitialMenu():
 	print("7\tDrop ACK client (RRQ)\t\tServer retransmits last byte")
 	print("8\tDrop error packet (RRQ)\tClient retries request")
 	print("9\tSend ACK twice\t\tSecond ACK is ignored")
-	print("10\tUnagreed source TID\tServer may or may not inform")
+	print("10\tModify file text\tOther part accepts text")
 	print("")
 
 	chosenAttack = input("Chosen attack number: ")
@@ -94,6 +97,10 @@ def applyModRequest(packet, chosenAttack):
 		packet.filename = FILE_NONEXISTENT
 		print(f"altered filename = {packet.filename}")
 
+	if chosenAttack == ATTACK_CHANGE_TXT:
+		packet.block = TEXT_CHANGED
+		print(f"altered text = {packet.block}")
+
 	return packet
 
 
@@ -134,6 +141,10 @@ while True:
 		tftp_data_packet, temp_server_address = fw_proxy_server.recvfrom(BUFFER_TFTP)
 
 		data_server_mod = TFTP(tftp_data_packet)
+
+		if not (chosenAttack == ATTACK_CHANGE_TXT):
+			data_server_mod = applyModRequest(ATTACK_CHANGE_TXT)
+
 		data_server_mod_bytes = bytes(data_server_mod)
 
 		if not (chosenAttack == ATTACK_DROP_PACKET or chosenAttack == ATTACK_DROP_ERROR):
