@@ -232,6 +232,7 @@ while True:
 		else:
 			print(f"Omitting forwarding to the Server")
 			print(f"Waiting for re-sending from client")
+			request, client_address = server_socket.recvfrom(BUFFER_TFTP)
 			request_mod = TFTP(request)
 			request_mod_bytes = bytes(request_mod)
 			print(f"Received WRQ from the Client: Client = {client_address} | Data = {request_mod_bytes}")
