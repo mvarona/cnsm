@@ -116,7 +116,7 @@ fw_proxy_client.send(login_message)
 
 print(f"Waiting for a message from the client")
 message = fw_proxy_client.recv(BUFFER_FTP)
-message_str = str(pasv_message)
+message_str = str(message)
 print(message_str)
 fw_proxy_server.send(message)
 print(f"Waiting for a message from the server")
