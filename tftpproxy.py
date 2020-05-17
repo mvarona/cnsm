@@ -32,7 +32,6 @@ ATTACK_CHANGE_TXT = 10
 FILE_NONEXISTENT = "nonexistent.txt"
 FILE_FORBIDDEN = "forbidden.txt"
 TEXT_CHANGED = "!!!THIS TEXT WAS ALTERED!!!\n"
-OP_ALTERED = 2
 UDP_NEW_DPORT = 13
 SIZE_ERROR_PACK = 10
 
@@ -75,7 +74,7 @@ def chooseAttack():
 
 	return chosenAttack
 
-def applyModRequest(packet, chosenAttack):
+def applyModRequest(packet, chosenAttack, mode):
 	if chosenAttack == ATTACK_FILE_NOT_FOUND or chosenAttack == ATTACK_FILE_NOT_FOUND_WRQ or chosenAttack == ATTACK_DROP_ERROR:
 		packet.filename = FILE_NONEXISTENT
 		print(f"altered filename = {packet.filename}")
@@ -85,7 +84,10 @@ def applyModRequest(packet, chosenAttack):
 		print(f"altered filename = {packet.filename}")
 
 	if chosenAttack == ATTACK_ILLEGAL_OP:
-		packet.op = OP_ALTERED
+		if mode == OPCODE_READING:
+			packet.op = OPCODE_WRITING
+		if mode == OPCODE_WRITING:
+			packet.op = OPCODE_READING
 		print(f"altered op = {packet.op}")
 
 	if chosenAttack == ATTACK_CHANGE_DPORT:
@@ -132,10 +134,12 @@ while True:
 	print(f"Waiting for rrq/wrq from client")
 	request, client_address = server_socket.recvfrom(BUFFER_TFTP)
 
+	mode = request[POS_OPCODE]
+
 	request_mod = TFTP(request)
 
 	if chosenAttack == ATTACK_FILE_NOT_FOUND or chosenAttack == ATTACK_ACCESS_VIOLATION or chosenAttack == ATTACK_ILLEGAL_OP or chosenAttack == ATTACK_CHANGE_DPORT or chosenAttack == ATTACK_FILE_NOT_FOUND_WRQ or chosenAttack == ATTACK_DROP_ERROR:
-		request_mod = applyModRequest(request_mod, chosenAttack)
+		request_mod = applyModRequest(request_mod, chosenAttack, mode)
 
 	request_mod_bytes = bytes(request_mod)
 
@@ -157,7 +161,7 @@ while True:
 		while size >= MAX_TRANSFER_TFTP:
 
 			if chosenAttack == ATTACK_CHANGE_TXT:
-				data_server_mod = applyModRequest(data_server_mod, ATTACK_CHANGE_TXT)
+				data_server_mod = applyModRequest(data_server_mod, ATTACK_CHANGE_TXT, mode)
 
 			data_server_mod_bytes = bytes(data_server_mod)
 
@@ -173,7 +177,7 @@ while True:
 				request_mod = TFTP(request)
 
 				if chosenAttack == ATTACK_DROP_ERROR:
-					request_mod = applyModRequest(request_mod, chosenAttack)
+					request_mod = applyModRequest(request_mod, chosenAttack, mode)
 
 				request_mod_bytes = bytes(request_mod)
 
@@ -249,7 +253,7 @@ while True:
 				data_server_mod = tftp_data_packet
 
 			if chosenAttack == ATTACK_CHANGE_TXT:
-				data_server_mod = applyModRequest(data_server_mod, ATTACK_CHANGE_TXT)
+				data_server_mod = applyModRequest(data_server_mod, ATTACK_CHANGE_TXT, mode)
 
 			data_server_mod_bytes = bytes(data_server_mod)
 
@@ -265,7 +269,7 @@ while True:
 				request_mod = TFTP(request)
 
 				if chosenAttack == ATTACK_DROP_ERROR:
-					request_mod = applyModRequest(request_mod, chosenAttack)
+					request_mod = applyModRequest(request_mod, chosenAttack, mode)
 
 				request_mod_bytes = bytes(request_mod)
 
@@ -360,7 +364,7 @@ while True:
 			request, client_address = server_socket.recvfrom(BUFFER_TFTP)
 			request_mod = TFTP(request)
 			print(f"Received WRQ from the Client: Client = {client_address} | Data = {request_mod_bytes}")
-			request_mod = applyModRequest(request_mod, chosenAttack)
+			request_mod = applyModRequest(request_mod, chosenAttack, mode)
 			request_mod_bytes = bytes(request_mod)
 			fw_proxy_server.sendto(request_mod_bytes, tftp_server_address)
 			print(f"Forwarding wrq to the Server: Server = {tftp_server_address}")
@@ -385,7 +389,7 @@ while True:
 			while size >= MAX_TRANSFER_TFTP:
 
 				if chosenAttack == ATTACK_CHANGE_TXT:
-					datapacket_client_mod = applyModRequest(datapacket_client_mod, ATTACK_CHANGE_TXT)
+					datapacket_client_mod = applyModRequest(datapacket_client_mod, ATTACK_CHANGE_TXT, mode)
 
 				datapacket_client_mod_bytes = bytes(datapacket_client_mod)
 
@@ -430,7 +434,7 @@ while True:
 					datapacket_client_mod = datapacket
 
 				if chosenAttack == ATTACK_CHANGE_TXT:
-					datapacket_client_mod = applyModRequest(datapacket_client_mod, ATTACK_CHANGE_TXT)
+					datapacket_client_mod = applyModRequest(datapacket_client_mod, ATTACK_CHANGE_TXT, mode)
 
 				datapacket_client_mod_bytes = bytes(datapacket_client_mod)
 
