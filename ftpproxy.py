@@ -139,10 +139,10 @@ while True:
 	print(passv_answer_str)
 	fw_proxy_client.send(passv_answer)
 
-	print(f"Waiting for command message from the client")
-	command_message = fw_proxy_client.recv(BUFFER_FTP)
-	command_message_str = str(command_message)
-	print(command_message_str)
+	#print(f"Waiting for command message from the client")
+	#command_message = fw_proxy_client.recv(BUFFER_FTP)
+	#command_message_str = str(command_message)
+	#print(command_message_str)
 
 	if FTP_PASSV_SERVER_CODE in passv_answer_str:
 		start = passv_answer_str.find("(")
@@ -152,7 +152,7 @@ while True:
 
 		dataSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 		dataSocket.connect((IP_SERVER, port))
-		data_answer = send(fw_proxy_server, prepareClientCommand(command_message_str))
+		data_answer = send(fw_proxy_server, "ls")
 		data_answer = dataSocket.recv(BUFFER_FTP * 2)
 		print(f"Message2: {data_answer}")
 		fw_proxy_client.send(data_answer)
