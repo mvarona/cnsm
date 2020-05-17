@@ -408,10 +408,10 @@ while True:
 
 				datapacket, clientaddress = fw_proxy_client.recvfrom(BUFFER_TFTP)
 				datapacket_client_mod = TFTP(datapacket)
-				next = len(vars(datapacket_mod))
+				next = len(vars(datapacket_client_mod))
 
 				if next > VALUES_IN_LAST_PACKET_TFTP:
-					size = len(datapacket_mod.load)
+					size = len(datapacket_client_mod.load)
 				else:
 					size = 0
 
