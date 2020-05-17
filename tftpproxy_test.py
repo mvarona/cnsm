@@ -77,14 +77,16 @@ while True:
 		print(f"Forwarding ack to the Client: Client = {client_address}")
 
 		datapacket, clientaddress = fw_proxy_client.recvfrom(1024)
-		datapacket.show()
-		size = len(datapacket.load)
+		datapacket_mod = TFTP(datapacket)
+		datapacket_mod_bytes = bytes(datapacket_mod)
+
+		size = len(datapacket_mod.load)
 		print(size)
 
 		while size >= 512:
 
-			fw_proxy_server.sendto(datapacket, temp_server_address)
-			print(f"Received Data-Packet from Client: Client = {clientaddress} | Data = {datapacket}")
+			fw_proxy_server.sendto(datapacket_mod_bytes, temp_server_address)
+			print(f"Received Data-Packet from Client: Client = {clientaddress} | Data = {datapacket_mod_bytes}")
 			print(f"Forwarding data to the Server: Server = {temp_server_address}")
 
 			ack_packet, temp_server_address = fw_proxy_server.recvfrom(1024)
@@ -93,11 +95,13 @@ while True:
 			print(f"Forwarding ack to the Client: Client = {client_address}")
 
 			datapacket, clientaddress = fw_proxy_client.recvfrom(1024)
-
-			next = len(vars(datapacket))
+			datapacket_mod = TFTP(datapacket)
+			datapacket_mod_bytes = bytes(datapacket_mod)
+			
+			next = len(vars(datapacket_mod))
 
 			if next > 1:
-				size = len(datapacket.load)
+				size = len(datapacket_mod.load)
 				print(size)
 			else:
 				size = 0
