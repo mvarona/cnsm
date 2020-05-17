@@ -236,11 +236,12 @@ while True:
 					size = getBytesForPacket(tftp_data_packet)
 				else:
 					size = 0
-				print("HERE")
-				print(size)
 
 		if size < MAX_TRANSFER_TFTP:
-			
+
+			if size == 0:
+				data_server_mod = tftp_data_packet
+
 			if chosenAttack == ATTACK_CHANGE_TXT:
 				data_server_mod = applyModRequest(data_server_mod, ATTACK_CHANGE_TXT)
 
