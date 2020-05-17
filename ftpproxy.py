@@ -10,7 +10,7 @@ IP_SERVER = "192.168.30.90"
 INTERFACE_NETWORK_PROXY = "enp0s3.30"
 BUFFER_FTP = 1024
 FTP_PASSV_SERVER_CODE = "227" #FTP sends status code 227 in response to a passive request from client
-MIN_ATTACK_NUM = 1
+MIN_ATTACK_NUM = 0
 MAX_ATTACK_NUM = 10
 
 # Functions:
@@ -28,18 +28,19 @@ def showInitialMenu():
 	print("*** Welcome to ftpproxuy ***")
 	print("Please, choose one of the following attacks to be carried out:")
 	print("")
-	print("#\tError scenario\t\tExpected result")
+	print("#\tError scenario\t\t\tExpected result")
 	print("")
+	print("0\tNo error\t\t\tNormal working")
 	print("1\tFile not found on get\t\tReturn error code 550")
-	print("2\tFile not found on put\tReturn error code 550")
-	print("3\tUnknown command\tReturn error code 500")
-	print("4\tSyntax error in parameter\t\tReturn error code 501")
-	print("5\tChange username\tReturn error code 530")
+	print("2\tFile not found on put\t\tReturn error code 550")
+	print("3\tUnknown command\t\tReturn error code 500")
+	print("4\tSyntax error in parameter\tReturn error code 501")
+	print("5\tChange username\t\t\tReturn error code 530")
 	print("6\tDrop ACK packet handshake\tConnection timed out")
-	print("7\tDrop ACK packet\t\tLast client-packet retransmitted")
-	print("8\tDrop server packet\tLast server-packet retransmitted")
-	print("9\tDuplicate ACK\t\tDo nothing")
-	print("10\tTriplicate ACK\tResend following packet")
+	print("7\tDrop ACK packet\t\t\tLast client-packet retransmitted")
+	print("8\tDrop server packet\t\tLast server-packet retransmitted")
+	print("9\tDuplicate ACK\t\t\tDo nothing")
+	print("10\tTriplicate ACK\t\t\tResend following packet")
 	print("")
 	
 	chosenAttack = input("Chosen attack number: ")
@@ -60,6 +61,11 @@ def chooseAttack():
 
 	return chosenAttack
 
+def prepareClientCommand(command):
+	if "ls" in command:
+		command = command.replace("ls", "LIST")
+
+	return command
 
 # Entry point:
 
@@ -124,7 +130,7 @@ while True:
 
 		dataSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 		dataSocket.connect((IP_SERVER, port))
-		message2 = send(fw_proxy_server, command)
+		message2 = send(fw_proxy_server, prepareClientCommand(str(command)))
 		message2 = dataSocket.recv(BUFFER_FTP * 2)
 		print(f"Message2: {message2}")
 		fw_proxy_client.send(message2)
