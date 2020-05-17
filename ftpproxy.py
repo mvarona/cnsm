@@ -150,6 +150,15 @@ while True:
 		tuple = passv_answer_str[start+1:end].split(',')
 		port = int(tuple[4])*256 + int(tuple[5])
 
+		server_socket2 = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+		server_socket2.bind((IP_PROXY, port))
+		fw_proxy_client, client_address = server_socket2.accept()
+
+		print(f"Waiting for command message from the client")
+		command_message = fw_proxy_client.recv(BUFFER_FTP)
+		command_message_str = str(command_message)
+		print(command_message_str)
+
 		dataSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 		dataSocket.connect((IP_SERVER, port))
 		data_answer = send(fw_proxy_server, prepareClientCommand("ls"))
