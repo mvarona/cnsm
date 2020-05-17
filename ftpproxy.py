@@ -129,6 +129,7 @@ while True:
 	print(f"Waiting for command message from the client")
 	command_message = fw_proxy_client.recv(BUFFER_FTP)
 	command_message_str = str(command_message)
+	print(command_message_str)
 
 	if FTP_PASSV_SERVER_CODE in passv_answer_string:
 		start = passv_answer_string.find("(")
