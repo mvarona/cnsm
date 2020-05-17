@@ -62,7 +62,7 @@ def chooseAttack():
 	return chosenAttack
 
 def prepareClientCommand(command):
-	print("NO ENTERS IN")
+	print(command)
 	if "ls" in command:
 		print("ENTERS IN")
 		command = command.replace("ls", "LIST")
