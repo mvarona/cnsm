@@ -105,10 +105,6 @@ def getBytesForPacket(packet):
 	print(size)
 	return size
 
-def countValuesInPacket(packet):
-	num = len(vars(tftp_data_packet))
-	return num
-
 
 server_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 server_socket.bind((IP_PROXY, TFTP_PORT))
@@ -229,13 +225,7 @@ while True:
 
 				tftp_data_packet, temp_server_address = fw_proxy_server.recvfrom(1024)
 				tftp_data_packet = TFTP(tftp_data_packet)
-
-				num = countValuesInPacket(tftp_data_packet)
-
-				if num > 1:
-					size = getBytesForPacket(tftp_data_packet)
-				else:
-					size = 0
+				size = getBytesForPacket(tftp_data_packet)
 
 		if size < MAX_TRANSFER_TFTP:
 			
