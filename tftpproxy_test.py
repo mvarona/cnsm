@@ -66,6 +66,7 @@ while True:
 			print(f"Forwarding ack to the Server: Server = {temp_server_address}")
 
 	elif request[1] == 2:
+
 		fw_proxy_server.sendto(request, tftp_server_address)
 		print(f"Received WRQ from the Client: Client = {client_address} | Request = {request}")
 		print(f"Forwarding wrq to the Server: Server = {tftp_server_address}")
@@ -76,11 +77,37 @@ while True:
 		print(f"Forwarding ack to the Client: Client = {client_address}")
 
 		datapacket, clientaddress = fw_proxy_client.recvfrom(1024)
-		fw_proxy_server.sendto(datapacket, temp_server_address)
-		print(f"Received Data-Packet from Client: Client = {clientaddress} | Data = {datapacket}")
-		print(f"Forwarding data to the Server: Server = {temp_server_address}")
 
-		ack_packet, temp_server_address = fw_proxy_server.recvfrom(1024)
-		fw_proxy_client.sendto(ack_packet, client_address)
-		print(f"Received ACK from the Server: Server = {temp_server_address} | ACK-Data = {ack_packet}")
-		print(f"Forwarding ack to the Client: Client = {client_address}")
+		size = len(tftp_data_packet.load)
+		print(size)
+
+		while size >= 512:
+
+			fw_proxy_server.sendto(datapacket, temp_server_address)
+			print(f"Received Data-Packet from Client: Client = {clientaddress} | Data = {datapacket}")
+			print(f"Forwarding data to the Server: Server = {temp_server_address}")
+
+			ack_packet, temp_server_address = fw_proxy_server.recvfrom(1024)
+			fw_proxy_client.sendto(ack_packet, client_address)
+			print(f"Received ACK from the Server: Server = {temp_server_address} | ACK-Data = {ack_packet}")
+			print(f"Forwarding ack to the Client: Client = {client_address}")
+
+			datapacket, clientaddress = fw_proxy_client.recvfrom(1024)
+
+			next = len(vars(datapacket))
+
+			if next > 1:
+				size = len(datapacket.load)
+				print(size)
+			else:
+				size = 0
+
+		if size < 512:
+			fw_proxy_server.sendto(datapacket, temp_server_address)
+			print(f"Received Data-Packet from Client: Client = {clientaddress} | Data = {datapacket}")
+			print(f"Forwarding data to the Server: Server = {temp_server_address}")
+
+			ack_packet, temp_server_address = fw_proxy_server.recvfrom(1024)
+			fw_proxy_client.sendto(ack_packet, client_address)
+			print(f"Received ACK from the Server: Server = {temp_server_address} | ACK-Data = {ack_packet}")
+			print(f"Forwarding ack to the Client: Client = {client_address}")
