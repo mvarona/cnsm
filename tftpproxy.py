@@ -34,6 +34,7 @@ FILE_FORBIDDEN = "forbidden.txt"
 TEXT_CHANGED = "!!!THIS TEXT WAS ALTERED!!!\n"
 OP_NONEXISTENT = 1
 UDP_NEW_DPORT = 13
+SIZE_ERROR_PACK = 10
 
 # Functions:
 
@@ -146,7 +147,12 @@ while True:
 		tftp_data_packet, temp_server_address = fw_proxy_server.recvfrom(BUFFER_TFTP)
 
 		data_server_mod = TFTP(tftp_data_packet)
-		size = getBytesForPacket(data_server_mod)
+		print("LOOK HERE!")
+		data_server_mod.show()
+		if countValuesInPacket(data_server_mod) > VALUES_IN_ERROR_PACKET_TFTP:
+			size = getBytesForPacket(data_server_mod)
+		else:
+			size = SIZE_ERROR_PACK
 
 		while size >= MAX_TRANSFER_TFTP:
 
