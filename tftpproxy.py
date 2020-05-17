@@ -153,7 +153,7 @@ while True:
 		data_server_mod = TFTP(tftp_data_packet)
 		size = 0
 
-		if chosenAttack == ATTACK_FILE_NOT_FOUND or chosenAttack == ATTACK_ACCESS_VIOLATION or chosenAttack == ATTACK_ILLEGAL_OP or chosenAttack == ATTACK_CHANGE_DPORT or chosenAttack == ATTACK_FILE_NOT_FOUND_WRQ or chosenAttack == ATTACK_DROP_ERROR:
+		if chosenAttack == ATTACK_FILE_NOT_FOUND or chosenAttack == ATTACK_ACCESS_VIOLATION or chosenAttack == ATTACK_ILLEGAL_OP or chosenAttack == ATTACK_CHANGE_DPORT or chosenAttack == ATTACK_FILE_NOT_FOUND_WRQ or chosenAttack == ATTACK_DROP_PACKET or chosenAttack == ATTACK_DROP_ERROR:
 			size = SIZE_ERROR_PACK
 		else:
 			size = getBytesForPacket(data_server_mod)
@@ -381,7 +381,7 @@ while True:
 
 			datapacket_client_mod = TFTP(datapacket)
 
-			if chosenAttack == ATTACK_FILE_NOT_FOUND or chosenAttack == ATTACK_ACCESS_VIOLATION or chosenAttack == ATTACK_ILLEGAL_OP or chosenAttack == ATTACK_CHANGE_DPORT or chosenAttack == ATTACK_FILE_NOT_FOUND_WRQ or chosenAttack == ATTACK_DROP_ERROR:
+			if chosenAttack == ATTACK_FILE_NOT_FOUND or chosenAttack == ATTACK_ACCESS_VIOLATION or chosenAttack == ATTACK_ILLEGAL_OP or chosenAttack == ATTACK_CHANGE_DPORT or chosenAttack == ATTACK_FILE_NOT_FOUND_WRQ or chosenAttack == ATTACK_DROP_PACKET or chosenAttack == ATTACK_DROP_ERROR:
 				size = SIZE_ERROR_PACK
 			else:
 				size = getBytesForPacket(datapacket_client_mod)
