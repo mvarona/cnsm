@@ -109,6 +109,7 @@ fw_proxy_client.send(login_message)
 while True:
 	print(f"Waiting for a message from the client")
 	message = fw_proxy_client.recv(BUFFER_FTP)
+	command = str(message)
 	print(message)
 	fw_proxy_server.send(message)
 	print(f"Waiting for a message from the server")
@@ -123,7 +124,7 @@ while True:
 
 		dataSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 		dataSocket.connect((IP_SERVER, port))
-		message2 = send(fw_proxy_server, "LIST")
+		message2 = send(fw_proxy_server, command)
 		message2 = dataSocket.recv(BUFFER_FTP * 2)
 		print(f"Message2: {message2}")
 		fw_proxy_client.send(message2)
