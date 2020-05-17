@@ -77,8 +77,8 @@ while True:
 		print(f"Forwarding ack to the Client: Client = {client_address}")
 
 		datapacket, clientaddress = fw_proxy_client.recvfrom(1024)
-
-		size = len(tftp_data_packet.load)
+		datapacket.show()
+		size = len(datapacket.load)
 		print(size)
 
 		while size >= 512:
