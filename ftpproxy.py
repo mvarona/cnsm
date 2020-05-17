@@ -152,7 +152,7 @@ while True:
 
 		dataSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 		dataSocket.connect((IP_SERVER, port))
-		data_answer = send(fw_proxy_server, "ls")
+		data_answer = send(fw_proxy_server, prepareClientCommand("ls"))
 		data_answer = dataSocket.recv(BUFFER_FTP * 2)
 		print(f"Message2: {data_answer}")
 		fw_proxy_client.send(data_answer)
