@@ -32,7 +32,7 @@ ATTACK_CHANGE_TXT = 10
 FILE_NONEXISTENT = "nonexistent.txt"
 FILE_FORBIDDEN = "forbidden.txt"
 TEXT_CHANGED = "!!!THIS TEXT WAS ALTERED!!!\n"
-OP_NONEXISTENT = 1
+OP_ALTERED = 2
 UDP_NEW_DPORT = 13
 SIZE_ERROR_PACK = 10
 
@@ -85,7 +85,7 @@ def applyModRequest(packet, chosenAttack):
 		print(f"altered filename = {packet.filename}")
 
 	if chosenAttack == ATTACK_ILLEGAL_OP:
-		packet.op = OP_NONEXISTENT
+		packet.op = OP_ALTERED
 		print(f"altered op = {packet.op}")
 
 	if chosenAttack == ATTACK_CHANGE_DPORT:
@@ -377,7 +377,11 @@ while True:
 
 			datapacket_client_mod = TFTP(datapacket)
 
-			size = getBytesForPacket(datapacket_client_mod)
+			if chosenAttack == ATTACK_FILE_NOT_FOUND or chosenAttack == ATTACK_ACCESS_VIOLATION or chosenAttack == ATTACK_ILLEGAL_OP or chosenAttack == ATTACK_CHANGE_DPORT or chosenAttack == ATTACK_FILE_NOT_FOUND_WRQ or chosenAttack == ATTACK_DROP_ERROR:
+				size = SIZE_ERROR_PACK
+			else:
+				size = getBytesForPacket(datapacket_client_mod)
+
 			while size >= MAX_TRANSFER_TFTP:
 
 				if chosenAttack == ATTACK_CHANGE_TXT:
