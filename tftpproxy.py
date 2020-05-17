@@ -103,7 +103,6 @@ def applyModRequest(packet, chosenAttack):
 
 def getBytesForPacket(packet):
 	size = len(packet.load)
-	print(size)
 	return size
 
 def countValuesInPacket(packet):
@@ -221,7 +220,7 @@ while True:
 					print(f"Received first ACK from the Client: Cient = {client_address} | Data = {ack_server_mod_bytes}")
 					print(f"Forwarding first ack to the Server: Server = {temp_server_address}")
 
-					time.sleep(2) # We wait one second to see it clearly
+					time.sleep(2) # We wait two seconds to see it clearly
 					
 					fw_proxy_server.sendto(ack_server_mod_bytes, temp_server_address)
 					print(f"Received second ACK from the Client: Cient = {client_address} | Data = {ack_server_mod_bytes}")
@@ -313,7 +312,7 @@ while True:
 					print(f"Received first ACK from the Client: Cient = {client_address} | Data = {ack_server_mod_bytes}")
 					print(f"Forwarding first ack to the Server: Server = {temp_server_address}")
 
-					time.sleep(2) # We wait one second to see it clearly
+					time.sleep(2) # We wait two seconds to see it clearly
 					
 					fw_proxy_server.sendto(ack_server_mod_bytes, temp_server_address)
 					print(f"Received second ACK from the Client: Cient = {client_address} | Data = {ack_server_mod_bytes}")
