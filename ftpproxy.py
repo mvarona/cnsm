@@ -123,7 +123,7 @@ print(f"Waiting for a message from the server")
 answer = fw_proxy_server.recv(BUFFER_FTP)
 answer_str = str(answer)
 print(answer_str)
-fw_proxy_client.send(answer_str)
+fw_proxy_client.send(answer)
 
 while True:
 
