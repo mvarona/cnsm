@@ -14,7 +14,6 @@ OPCODE_WRITING = 2
 BUFFER_TFTP = 1024
 MAX_TRANSFER_TFTP = 512
 VALUES_IN_LAST_PACKET_TFTP = 1
-VALUES_IN_ERROR_PACKET_TFTP = 2
 
 MIN_ATTACK_NUM = 0
 MAX_ATTACK_NUM = 10
@@ -148,12 +147,12 @@ while True:
 		tftp_data_packet, temp_server_address = fw_proxy_server.recvfrom(BUFFER_TFTP)
 
 		data_server_mod = TFTP(tftp_data_packet)
-		print("LOOK HERE!")
-		data_server_mod.show()
-		if countValuesInPacket(data_server_mod) != VALUES_IN_ERROR_PACKET_TFTP:
-			size = getBytesForPacket(data_server_mod)
-		else:
+		size = 0
+
+		if chosenAttack == ATTACK_FILE_NOT_FOUND or chosenAttack == ATTACK_ACCESS_VIOLATION or chosenAttack == ATTACK_ILLEGAL_OP or chosenAttack == ATTACK_CHANGE_DPORT or chosenAttack == ATTACK_FILE_NOT_FOUND_WRQ or chosenAttack == ATTACK_DROP_ERROR:
 			size = SIZE_ERROR_PACK
+		else:
+			size = getBytesForPacket(data_server_mod)
 
 		while size >= MAX_TRANSFER_TFTP:
 
