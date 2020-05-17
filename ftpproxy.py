@@ -33,7 +33,7 @@ def showInitialMenu():
 	print("0\tNo error\t\t\tNormal working")
 	print("1\tFile not found on get\t\tReturn error code 550")
 	print("2\tFile not found on put\t\tReturn error code 550")
-	print("3\tUnknown command\t\tReturn error code 500")
+	print("3\tUnknown command\t\t\tReturn error code 500")
 	print("4\tSyntax error in parameter\tReturn error code 501")
 	print("5\tChange username\t\t\tReturn error code 530")
 	print("6\tDrop ACK packet handshake\tConnection timed out")
@@ -62,7 +62,9 @@ def chooseAttack():
 	return chosenAttack
 
 def prepareClientCommand(command):
+	print("NO ENTERS IN")
 	if "ls" in command:
+		print("ENTERS IN")
 		command = command.replace("ls", "LIST")
 
 	return command
