@@ -14,6 +14,7 @@ OPCODE_WRITING = 2
 BUFFER_TFTP = 1024
 MAX_TRANSFER_TFTP = 512
 VALUES_IN_LAST_PACKET_TFTP = 1
+VALUES_IN_ERROR_PACKET_TFTP = 2
 
 MIN_ATTACK_NUM = 0
 MAX_ATTACK_NUM = 10
@@ -149,7 +150,7 @@ while True:
 		data_server_mod = TFTP(tftp_data_packet)
 		print("LOOK HERE!")
 		data_server_mod.show()
-		if countValuesInPacket(data_server_mod) > VALUES_IN_ERROR_PACKET_TFTP:
+		if countValuesInPacket(data_server_mod) != VALUES_IN_ERROR_PACKET_TFTP:
 			size = getBytesForPacket(data_server_mod)
 		else:
 			size = SIZE_ERROR_PACK
