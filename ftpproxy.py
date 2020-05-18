@@ -10,7 +10,7 @@ IP_SERVER = "192.168.30.90"
 INTERFACE_NETWORK_PROXY = "enp0s3.30"
 BUFFER_FTP = 1024
 FTP_PASSV_SERVER_CODE = "227" #FTP sends status code 227 in response to a passive request from client
-MIN_ATTACK_NUM = 0
+MIN_ATTACK_NUM = 1
 MAX_ATTACK_NUM = 10
 
 # Functions:
@@ -28,19 +28,18 @@ def showInitialMenu():
 	print("*** Welcome to ftpproxuy ***")
 	print("Please, choose one of the following attacks to be carried out:")
 	print("")
-	print("#\tError scenario\t\t\tExpected result")
+	print("#\tError scenario\t\tExpected result")
 	print("")
-	print("0\tNo error\t\t\tNormal working")
 	print("1\tFile not found on get\t\tReturn error code 550")
-	print("2\tFile not found on put\t\tReturn error code 550")
-	print("3\tUnknown command\t\t\tReturn error code 500")
-	print("4\tSyntax error in parameter\tReturn error code 501")
-	print("5\tChange username\t\t\tReturn error code 530")
+	print("2\tFile not found on put\tReturn error code 550")
+	print("3\tUnknown command\tReturn error code 500")
+	print("4\tSyntax error in parameter\t\tReturn error code 501")
+	print("5\tChange username\tReturn error code 530")
 	print("6\tDrop ACK packet handshake\tConnection timed out")
-	print("7\tDrop ACK packet\t\t\tLast client-packet retransmitted")
-	print("8\tDrop server packet\t\tLast server-packet retransmitted")
-	print("9\tDuplicate ACK\t\t\tDo nothing")
-	print("10\tTriplicate ACK\t\t\tResend following packet")
+	print("7\tDrop ACK packet\t\tLast client-packet retransmitted")
+	print("8\tDrop server packet\tLast server-packet retransmitted")
+	print("9\tDuplicate ACK\t\tDo nothing")
+	print("10\tTriplicate ACK\tResend following packet")
 	print("")
 	
 	chosenAttack = input("Chosen attack number: ")
@@ -61,13 +60,6 @@ def chooseAttack():
 
 	return chosenAttack
 
-def prepareClientCommand(command):
-	print(command)
-	if "ls" in command:
-		print("ENTERS IN")
-		command = command.replace("ls", "LIST")
-
-	return command
 
 # Entry point:
 
@@ -114,56 +106,33 @@ login_message = fw_proxy_server.recv(BUFFER_FTP)
 print(login_message)
 fw_proxy_client.send(login_message)
 
-print(f"Waiting for a message from the client")
-message = fw_proxy_client.recv(BUFFER_FTP)
-message_str = str(message)
-print(message_str)
-fw_proxy_server.send(message)
-print(f"Waiting for a message from the server")
-answer = fw_proxy_server.recv(BUFFER_FTP)
-answer_str = str(answer)
-print(answer_str)
-fw_proxy_client.send(answer)
-
 while True:
-
-	print(f"Waiting for a passive request message from the client")
-	pasv_message = fw_proxy_client.recv(BUFFER_FTP)
-	pasv_message_str = str(pasv_message)
-	print(pasv_message_str)
-	fw_proxy_server.send(pasv_message)
+	print(f"Waiting for a message from the client")
+	message = fw_proxy_client.recv(BUFFER_FTP)
+	print(message)
+	fw_proxy_server.send(message)
 	print(f"Waiting for a message from the server")
-	passv_answer = fw_proxy_server.recv(BUFFER_FTP)
-	passv_answer_str = str(passv_answer)
+	message = fw_proxy_server.recv(BUFFER_FTP)
+	message_string = str(message)
 
-	print(passv_answer_str)
-	fw_proxy_client.send(passv_answer)
-
-	#print(f"Waiting for command message from the client")
-	#command_message = fw_proxy_client.recv(BUFFER_FTP)
-	#command_message_str = str(command_message)
-	#print(command_message_str)
-
-	if FTP_PASSV_SERVER_CODE in passv_answer_str:
-		start = passv_answer_str.find("(")
-		end = passv_answer_str.find(")")
-		tuple = passv_answer_str[start+1:end].split(',')
+	if FTP_PASSV_SERVER_CODE in message_string:
+		start = message_string.find("(")
+		end = message_string.find(")")
+		tuple = message_string[start+1:end].split(',')
 		port = int(tuple[4])*256 + int(tuple[5])
-
-		server_socket2 = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-		server_socket2.bind((IP_SERVER, port))
-		server_socket2.listen(5)
-		fw_proxy_client2, client_address = server_socket2.accept()
-		print(f"Connection from {client_address} has been established!")
 
 		dataSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 		dataSocket.connect((IP_SERVER, port))
-		data_answer = send(fw_proxy_server, prepareClientCommand(command_message_str))
-		data_answer = dataSocket.recv(BUFFER_FTP * 2)
-		print(f"Message2: {data_answer}")
-		fw_proxy_client.send(data_answer)
+		message2 = send(fw_proxy_server, "LIST")
+		message2 = dataSocket.recv(BUFFER_FTP * 2)
+		print(f"Message2: {message2}")
+		fw_proxy_client.send(message2)
 
-		dataSocket.close()	
+		dataSocket.close()
+
+
+	print(message)
+	fw_proxy_client.send(message)
 
 #server_socket.close()
 #fw_proxy_server.close()
