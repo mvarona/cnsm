@@ -1,5 +1,5 @@
 import socket
-
+from scapy.all import *
 
 # Constants:
 
@@ -10,15 +10,26 @@ IP_SERVER = "192.168.30.90"
 INTERFACE_NETWORK_PROXY = "enp0s3.30"
 BUFFER_FTP = 1024
 FTP_PASSV_SERVER_CODE = "227" #FTP sends status code 227 in response to a passive request from client
-MIN_ATTACK_NUM = 1
+MIN_ATTACK_NUM = 0
 MAX_ATTACK_NUM = 10
+
+ATTACK_NO_ATTACK = 0
+ATTACK_FILE_NOT_FOUND_GET = 1
+ATTACK_FILE_NOT_FOUND_PUT = 2
+ATTACK_UNKNOWN_COMMAND = 3
+ATTACK_SYNTAX_ERROR = 4
+ATTACK_CHANGE_USER = 5
+ATTACK_DROP_ACK_HSK = 6
+ATTACK_DROP_ACK = 7
+ATTACK_DROP_PACK = 8
+ATTACK_TWICE_ACK = 9
+ATTACK_THRICE_ACK = 10
 
 # Functions:
 
 def send(socket, msg):
 	print("===>sending: " + msg)
 	msgBytes = (msg + "\r\n").encode('utf-8')
-	msgBytes = bytes(msgBytes)
 	socket.send(msgBytes)
 	recv = socket.recv(BUFFER_FTP)
 	print("<===receive: " + str(recv))
@@ -28,18 +39,19 @@ def showInitialMenu():
 	print("*** Welcome to ftpproxuy ***")
 	print("Please, choose one of the following attacks to be carried out:")
 	print("")
-	print("#\tError scenario\t\tExpected result")
+	print("#\tError scenario\t\t\tExpected result")
 	print("")
+	print("0\tNo error\t\t\tNormal working")
 	print("1\tFile not found on get\t\tReturn error code 550")
-	print("2\tFile not found on put\tReturn error code 550")
-	print("3\tUnknown command\tReturn error code 500")
-	print("4\tSyntax error in parameter\t\tReturn error code 501")
-	print("5\tChange username\tReturn error code 530")
+	print("2\tFile not found on put\t\tReturn error code 550")
+	print("3\tUnknown command\t\t\tReturn error code 500")
+	print("4\tSyntax error in parameter\tReturn error code 501")
+	print("5\tChange username\t\t\tReturn error code 530")
 	print("6\tDrop ACK packet handshake\tConnection timed out")
-	print("7\tDrop ACK packet\t\tLast client-packet retransmitted")
-	print("8\tDrop server packet\tLast server-packet retransmitted")
-	print("9\tDuplicate ACK\t\tDo nothing")
-	print("10\tTriplicate ACK\tResend following packet")
+	print("7\tDrop ACK packet\t\t\tLast client-packet retransmitted")
+	print("8\tDrop server packet\t\tLast server-packet retransmitted")
+	print("9\tDuplicate ACK\t\t\tDo nothing")
+	print("10\tTriplicate ACK\t\t\tResend following packet")
 	print("")
 	
 	chosenAttack = input("Chosen attack number: ")
@@ -59,6 +71,25 @@ def chooseAttack():
 			print("Please, introduce a valid number")
 
 	return chosenAttack
+
+def applyMod(packet, chosenAttack):
+	
+
+	return packet
+
+def buildMockPacket(packet):
+
+	print(f"Incoming packet:")
+	packet.show()
+	print(f"Altered built packet:")
+	packet = packet.__class__(str(packet))
+	packet.load = "LIST"
+	packet.sport = 12850
+	packet.dport = 12320
+	packet = TCP(packet)
+	packet.show()
+
+	return packet
 
 
 # Entry point:
@@ -83,28 +114,39 @@ fw_proxy_server.connect((IP_SERVER, FTP_CONTROL_PORT))
 
 #Proxy receives welcome message from the server and rorwards it to the client
 welcome_message = fw_proxy_server.recv(BUFFER_FTP)
+welcome_messageFTP = TCP(welcome_message)
+welcome_messageFTP_bytes = bytes(welcome_messageFTP)
 print(welcome_message)
-fw_proxy_client.send(welcome_message)
+fw_proxy_client.send(welcome_messageFTP_bytes)
 
 #Proxy receives username from client and forwards it to the server
 username = fw_proxy_client.recv(BUFFER_FTP)
+usernameFTP = UDP(username)
+usernameFTP.show()
+usernameFTP_bytes = bytes(usernameFTP)
 print(username)
-fw_proxy_server.send(username)
+fw_proxy_server.send(usernameFTP_bytes)
 
 #Proxy receives password prompt from the server and forwards it to the client
 password_prompt = fw_proxy_server.recv(BUFFER_FTP)
+password_promptFTP = TCP(password_prompt)
+password_promptFTP_bytes = bytes(password_promptFTP)
 print(password_prompt)
-fw_proxy_client.send(password_prompt)
+fw_proxy_client.send(password_promptFTP_bytes)
 
 #Proxy receives password from the client and forwards it to the server
 password = fw_proxy_client.recv(BUFFER_FTP)
+passwordFTP = TCP(password)
+passwordFTP_bytes = bytes(passwordFTP)
 print(password)
-fw_proxy_server.send(password)
+fw_proxy_server.send(passwordFTP_bytes)
 
 #Proxy receives login message from the server and forwards it to the client
 login_message = fw_proxy_server.recv(BUFFER_FTP)
+login_messageFTP = TCP(login_message)
+login_messageFTP_bytes = bytes(login_messageFTP)
 print(login_message)
-fw_proxy_client.send(login_message)
+fw_proxy_client.send(login_messageFTP_bytes)
 
 while True:
 	print(f"Waiting for a message from the client")
@@ -112,26 +154,33 @@ while True:
 	print(message)
 	fw_proxy_server.send(message)
 	print(f"Waiting for a message from the server")
-	message = fw_proxy_server.recv(BUFFER_FTP)
-	message_string = str(message)
+	answer = fw_proxy_server.recv(BUFFER_FTP)
+	print(answer)
+	answer_string = str(answer)
 
-	if FTP_PASSV_SERVER_CODE in message_string:
-		start = message_string.find("(")
-		end = message_string.find(")")
-		tuple = message_string[start+1:end].split(',')
+	if FTP_PASSV_SERVER_CODE in answer_string:
+		start = answer_string.find("(")
+		end = answer_string.find(")")
+		tuple = answer_string[start+1:end].split(',')
 		port = int(tuple[4])*256 + int(tuple[5])
 
 		dataSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 		dataSocket.connect((IP_SERVER, port))
-		message2 = send(fw_proxy_server, "LIST")
-		message2 = dataSocket.recv(BUFFER_FTP * 2)
-		print(f"Message2: {message2}")
-		fw_proxy_client.send(message2)
+
+		#request = send(fw_proxy_server, "LIST")
+
+		command = IP(src="192.168.30.80", dst=IP_SERVER)/TCP(sport=11000,dport=21)/"LIST"
+		command.show()
+		fw_proxy_server.send(bytes(command))
+		answerToRequest = dataSocket.recv(BUFFER_FTP * 2)
+		answerToRequestFTP = TCP(answerToRequest)
+		answerToRequestFTP_bytes = bytes(answerToRequestFTP)
+		print(f"AnswerToRequest: {answerToRequest}")
+		fw_proxy_client.send(answerToRequestFTP_bytes)
 
 		dataSocket.close()
 
 
-	print(message)
 	fw_proxy_client.send(message)
 
 #server_socket.close()
