@@ -120,7 +120,7 @@ chosenAttack = chooseAttack()
 #Create the socket to listen on 192.168.40.80:21
 server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 server_socket.bind((IP_PROXY, FTP_CONTROL_PORT))
-server_socket.listen(5)
+server_socket.listen(1)
 
 #Create the socket to forward the data to the server
 fw_proxy_server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -193,6 +193,65 @@ while True:
 	answer_string = str(answer)
 	fw_proxy_client.send(answer)
 
+	print(f"Here Waiting for a message from the client")
+	message = fw_proxy_client.recv(BUFFER_FTP)
+	print(message)
+
+	port
+
+	if "PORT" in str(message):
+		start = str(message).find("(")
+		end = str(message).find(")")
+		tuple = str(message)[start+1:end].split(',')
+		port = int(tuple[4])*256 + int(list(filter(str.isdigit, tuple[5]))[0])
+
+		answer = send(fw_proxy_server, "PORT 192,168,30,80," + tuple[4] + "," + tuple[5])
+		print(f"Waiting for a message from the server to the PORT message")
+		print(answer)
+		answer_string = str(answer)
+		fw_proxy_client.send(answer)
+
+	#Create the socket to listen on 192.168.40.80:21
+	server_socket2 = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+	server_socket2.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+	server_socket2.bind((IP_PROXY, port))
+	server_socket2.listen()
+
+	#Create the socket to forward the data to the server
+
+	print(f"Here 2 Waiting for a message from the client")
+	message = fw_proxy_client.recv(BUFFER_FTP)
+	print(message)
+
+	print(f"Here 2 Waiting for a message from the server")
+	message = send(fw_proxy_server, "LIST")
+	print(message)
+
+	#Accept an incoming connection from the Client
+	server_socket2, data_address = server_socket2.accept()
+	print(f"Data connection from {data_address} has been established!")
+
+	print(f"Waiting for a message from the server")
+	print(answer)
+
+
+	#Connect to the server
+#	fw_proxy_server2.connect((IP_SERVER, 20))
+
+	fw_proxy_server2.send(message)
+
+	print(f"Waiting for a message from the server")
+	answer = fw_proxy_server2.recv(BUFFER_FTP)
+	print(answer)
+	answer_string = str(answer)
+	fw_proxy_client.send(answer)
+
+	print(f"Here 3 Waiting for a message from the client")
+	message = fw_proxy_client.recv(BUFFER_FTP)
+	print(message)
+	fw_proxy_server.send(message)
+
+
 	if chosenAttack == ATTACK_TWICE_CTRL:
 		print(f"Sending again client message:")
 		print(message)
@@ -207,20 +266,17 @@ while True:
 		tuple = answer_string[start+1:end].split(',')
 		port = int(tuple[4])*256 + int(tuple[5])
 
-		#Create the socket to listen on 192.168.40.80:port
+		#Create the socket to listen on 192.168.40.80:21
 		server_socket2 = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 		server_socket2.bind((IP_PROXY, port))
-		server_socket2.listen(5)
+		server_socket2.listen(1)
 
 		#Create the socket to forward the data to the server
 		fw_proxy_server2 = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 		fw_proxy_server2.setsockopt(socket.SOL_SOCKET, 25, str(INTERFACE_NETWORK_PROXY + '\0').encode('utf-8'))
 
-		#Connect to the server
-		fw_proxy_server2.connect((IP_SERVER, port))
-
 		#Accept an incoming connection from the Client
-		fw_proxy_client2, client_address2 = server_socket2.accept()
+		fw_proxy_client2, client_address2 = server_socket.accept()
 		print(f"Connection from {client_address2} has been established!")
 
 		print(f"Here Waiting for a message from the client")
