@@ -7,7 +7,8 @@ FTP_CONTROL_PORT = 21 # FTP works over TCP on its port 21
 FTP_DATA_PORT = 20 # FTP works over TCP on its port 20
 IP_PROXY = "192.168.40.80"
 IP_SERVER = "192.168.30.90"
-INTERFACE_NETWORK_PROXY = "enp0s3.30"
+INTERFACE_PROXY_CLIENT = "enp0s3.30"
+INTERFACE_PROXY_SERVER = "enp0s3.30"
 BUFFER_FTP = 1024
 FTP_PASSV_SERVER_CODE = "227" #FTP sends status code 227 in response to a passive request from client
 MIN_ATTACK_NUM = 0
@@ -124,7 +125,7 @@ server_socket.listen(1)
 
 #Create the socket to forward the data to the server
 fw_proxy_server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-fw_proxy_server.setsockopt(socket.SOL_SOCKET, 25, str(INTERFACE_NETWORK_PROXY + '\0').encode('utf-8'))
+fw_proxy_server.setsockopt(socket.SOL_SOCKET, 25, str(INTERFACE_PROXY_CLIENT + '\0').encode('utf-8'))
 
 #Accept an incoming connection from the Client
 fw_proxy_client, client_address = server_socket.accept()
@@ -213,8 +214,8 @@ while True:
 
 	#Create the socket to listen on 192.168.40.80:21
 	server_socket2 = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-	server_socket2.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-	server_socket2.bind((IP_PROXY, port))
+	server_socket2.setsockopt(socket.SOL_SOCKET, 25, str(INTERFACE_PROXY_SERVER + '\0').encode('utf-8'))
+	server_socket2.bind(("192.168.30.80", port))
 	server_socket2.listen()
 
 	#Create the socket to forward the data to the server
@@ -223,9 +224,15 @@ while True:
 	message = fw_proxy_client.recv(BUFFER_FTP)
 	print(message)
 
-	print(f"Here 2 Waiting for a message from the server")
-	message = send(fw_proxy_server, "LIST")
-	print(message)
+#	print(f"Here 2 Waiting for a message from the server")
+#	message = send(fw_proxy_server, "LIST")
+#	print(message)
+
+	fw_proxy_server.send(message)
+	print(f"Waiting for a message from the server")
+	answer = fw_proxy_server.recv(BUFFER_FTP)
+	print(answer)
+
 
 	#Accept an incoming connection from the Client
 	server_socket2, data_address = server_socket2.accept()
