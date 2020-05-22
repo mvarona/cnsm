@@ -206,36 +206,31 @@ while True:
 		tuple = str(message)[start+1:end].split(',')
 		port = int(tuple[4])*256 + int(list(filter(str.isdigit, tuple[5]))[0])
 
+		#Create the socket to listen on 192.168.40.80:port
+		server_socket2 = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+		server_socket2.setsockopt(socket.SOL_SOCKET, 25, str(INTERFACE_PROXY_SERVER + '\0').encode('utf-8'))
+		server_socket2.bind(("192.168.40.80", port))
+		server_socket2.listen()
+
 		answer = send(fw_proxy_server, "PORT 192,168,30,80," + tuple[4] + "," + tuple[5])
 		print(f"Waiting for a message from the server to the PORT message")
-		print(answer)
-		answer_string = str(answer)
+		print(answer) # 200 PORT command successful
 		fw_proxy_client.send(answer)
-
-	#Create the socket to listen on 192.168.40.80:21
-	server_socket2 = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-	server_socket2.setsockopt(socket.SOL_SOCKET, 25, str(INTERFACE_PROXY_SERVER + '\0').encode('utf-8'))
-	server_socket2.bind(("192.168.30.80", port))
-	server_socket2.listen()
 
 	#Create the socket to forward the data to the server
 
-	print(f"Here 2 Waiting for a message from the client")
+	print(f"Waiting for a request from the client") # REQUEST: LIST
 	message = fw_proxy_client.recv(BUFFER_FTP)
 	print(message)
 
-#	print(f"Here 2 Waiting for a message from the server")
-#	message = send(fw_proxy_server, "LIST")
-#	print(message)
-
 	fw_proxy_server.send(message)
-	print(f"Waiting for a message from the server")
+	print(f"Waiting for an answer from the server") # Response 425: Unable to build data connection: Connection refused
 	answer = fw_proxy_server.recv(BUFFER_FTP)
 	print(answer)
 
 
 	#Accept an incoming connection from the Client
-	server_socket2, data_address = server_socket2.accept()
+	server_socket2, data_address = server_socket2.accept() #Program hang
 	print(f"Data connection from {data_address} has been established!")
 
 	print(f"Waiting for a message from the server")
