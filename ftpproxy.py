@@ -5,10 +5,11 @@ from scapy.all import *
 
 FTP_CONTROL_PORT = 21 # FTP works over TCP on its port 21
 FTP_DATA_PORT = 20 # FTP works over TCP on its port 20
-IP_PROXY = "192.168.40.80"
+IP_CLIENT = "192.168.40.50"
+IP_PROXY_CLIENT = "192.168.40.80"
+IP_PROXY_SERVER = "192.168.30.80"
 IP_SERVER = "192.168.30.90"
 INTERFACE_PROXY_CLIENT = "enp0s3.30"
-INTERFACE_PROXY_SERVER = "enp0s3.30"
 BUFFER_FTP = 1024
 FTP_PASSV_SERVER_CODE = "227" #FTP sends status code 227 in response to a passive request from client
 MIN_ATTACK_NUM = 0
@@ -120,7 +121,7 @@ chosenAttack = chooseAttack()
 
 #Create the socket to listen on 192.168.40.80:21
 server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-server_socket.bind((IP_PROXY, FTP_CONTROL_PORT))
+server_socket.bind((IP_PROXY_CLIENT, FTP_CONTROL_PORT))
 server_socket.listen(1)
 
 #Create the socket to forward the data to the server
@@ -208,7 +209,7 @@ while True:
 		second = int(tuple[5].replace("\\r\\n", ""))
 		port = int(first)*256 + int(second)
 
-		#Create the socket to listen on 192.168.40.80:port
+		#Create the socket to listen on 192.168.30.80:port
 		server_socket2 = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 		server_socket2.bind(('192.168.30.80', port))
 		server_socket2.listen(1)
@@ -228,37 +229,45 @@ while True:
 	fw_proxy_server2, data_address = server_socket2.accept()
 	print(f"Connected from {data_address}")
 
-
-	print(f"Waiting for an answer from the server") # Response 425: Unable to build data connection: Connection refused
+	print(f"Waiting for an answer from the server") # Response 150: Opening ASCII mode
 	answer = fw_proxy_server.recv(BUFFER_FTP)
 	print(answer)
-
-	print(f"Here we should receive 150 Opening ASCII mode")
-	ascii = server_socket2.recv(BUFFER_FTP)
-	print(ascii)
-
-
-	#Accept an incoming connection from the Client
-#	server_socket2, data_address = server_socket2.accept() #Program hang
-#	print(f"Data connection from {data_address} has been established!")
-
-
-	#Connect to the server
-#	fw_proxy_server2.connect((IP_SERVER, 20))
-
-	fw_proxy_server2.send(message)
-
-	print(f"Waiting for a message from the server")
-	answer = fw_proxy_server2.recv(BUFFER_FTP)
-	print(answer)
-	answer_string = str(answer)
 	fw_proxy_client.send(answer)
 
-	print(f"Here 3 Waiting for a message from the client")
-	message = fw_proxy_client.recv(BUFFER_FTP)
-	print(message)
-	fw_proxy_server.send(message)
+	print(f"Waiting for data from server")
+	data = fw_proxy_server2.recv(BUFFER_FTP)
+	print(data)
 
+	#Create the socket to forward the data to the client
+	fw_proxy_client2 = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+	fw_proxy_client2.connect((IP_CLIENT, port))
+	fw_proxy_client2.send(data)
+
+#	print(f"Waiting for FIN, ACK from the client")
+#	message = fw_proxy_client2.recv(BUFFER_FTP)
+#	print(message)
+#	fw_proxy_server2.send(message)
+#
+#	print(f"Waiting for ACK from the server")
+#	message = fw_proxy_server2.recv(BUFFER_FTP)
+#	print(message)
+#	fw_proxy_client2.send(message)
+
+	print(f"Waiting for 226 from the server")
+	message = fw_proxy_server2.recv(BUFFER_FTP)
+	print(message)
+	fw_proxy_client.send(message)
+
+	print(f"Waiting for ACK from the client")
+	message = fw_proxy_client2.recv(BUFFER_FTP)
+	print(message)
+	fw_proxy_server2.send(message)
+
+	print(f"Now we will check that no port has anything left to say...")
+	print(fw_proxy_server.recv(BUFFER_FTP))
+	print(fw_proxy_server2.recv(BUFFER_FTP))
+	print(fw_proxy_client2.recv(BUFFER_FTP))
+	print(fw_proxy_client.recv(BUFFER_FTP))
 
 	if chosenAttack == ATTACK_TWICE_CTRL:
 		print(f"Sending again client message:")
@@ -273,15 +282,6 @@ while True:
 		end = answer_string.find(")")
 		tuple = answer_string[start+1:end].split(',')
 		port = int(tuple[4])*256 + int(tuple[5])
-
-		#Create the socket to listen on 192.168.40.80:21
-		server_socket2 = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-		server_socket2.bind((IP_PROXY, port))
-		server_socket2.listen(1)
-
-		#Create the socket to forward the data to the server
-		fw_proxy_server2 = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-		fw_proxy_server2.setsockopt(socket.SOL_SOCKET, 25, str(INTERFACE_NETWORK_PROXY + '\0').encode('utf-8'))
 
 		#Accept an incoming connection from the Client
 		fw_proxy_client2, client_address2 = server_socket.accept()
