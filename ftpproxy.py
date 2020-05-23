@@ -28,7 +28,8 @@ ATTACK_TWICE_LIST = 9
 ATTACK_UNEXPECTED_COMMAND = 10
 
 USER_NONEXISTENT = "USER_NONEXISTENT\r\n"
-COMMAND_QUIT = "quit\r\n"
+COMMAND_EXIT = "QUIT"
+COMMAND_PORT = "PORT"
 FILE_NONEXISTENT = "nonexistent.txt"
 ERROR_FILE_NOT_FOUND_GET = "550 Permission denied (No such file or folder)\r\n"
 ERROR_UNEXPECTED_COMMAND = "500 List malformed not understood\r\n"
@@ -184,7 +185,8 @@ login_messageFTP_bytes = bytes(login_messageFTP)
 print(login_message)
 fw_proxy_client.send(login_messageFTP_bytes)
 
-while True:
+keepRunning = True
+while keepRunning == True:
 	print(f"Waiting for a message from the client")
 	message = fw_proxy_client.recv(BUFFER_FTP)
 	print(message)
@@ -195,13 +197,17 @@ while True:
 	answer_string = str(answer)
 	fw_proxy_client.send(answer)
 
-	print(f"Here Waiting for a message from the client")
+	print(f"Waiting for a message from the client")
 	message = fw_proxy_client.recv(BUFFER_FTP)
 	print(message)
+	message_string = str(message)
+	if COMMAND_EXIT in message_string:
+		keepRunning = False
+		break
 
 	port = 0
 
-	if "PORT" in str(message):
+	if COMMAND_PORT in str(message):
 		start = str(message).find("(")
 		end = str(message).find(")")
 		tuple = str(message)[start+1:end].split(',')
@@ -243,20 +249,14 @@ while True:
 	fw_proxy_client2.connect((IP_CLIENT, port))
 	fw_proxy_client2.send(data)
 
-#	print(f"Waiting for FIN, ACK from the client")
-#	message = fw_proxy_client2.recv(BUFFER_FTP)
-#	print(message)
-#	fw_proxy_server2.send(message)
-#
-#	print(f"Waiting for ACK from the server")
-#	message = fw_proxy_server2.recv(BUFFER_FTP)
-#	print(message)
-#	fw_proxy_client2.send(message)
-
 	print(f"Waiting for 226 from the server")
 	message = fw_proxy_server2.recv(BUFFER_FTP)
 	print(message)
 	fw_proxy_client2.send(message)
+
+	server_socket2.close()
+	fw_proxy_server2.close()
+	fw_proxy_client2.close()
 
 	if chosenAttack == ATTACK_TWICE_CTRL:
 		print(f"Sending again client message:")
@@ -331,5 +331,6 @@ while True:
 
 		dataSocket.close()
 
-#server_socket.close()
-#fw_proxy_server.close()
+server_socket.close()
+fw_proxy_server.close()
+fw_proxy_client.close()
