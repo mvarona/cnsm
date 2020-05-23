@@ -112,7 +112,7 @@ def countValuesInPacket(packet):
 	num = len(vars(tftp_data_packet))
 	return num
 
-def readingLogic(chosenAttack, data_server_mod, mode):
+def readingLogic(chosenAttack, data_server_mod, mode, fw_proxy_client, fw_proxy_server, client_address):
 	if chosenAttack == ATTACK_CHANGE_TXT:
 		data_server_mod = applyModRequest(data_server_mod, ATTACK_CHANGE_TXT, mode)
 
@@ -184,14 +184,14 @@ def readingLogic(chosenAttack, data_server_mod, mode):
 			print(f"Forwarding first ack to the Server: Server = {temp_server_address}")
 
 			time.sleep(2) # We wait two seconds to see it clearly
-			
+
 			fw_proxy_server.sendto(ack_server_mod_bytes, temp_server_address)
 			print(f"Received second ACK from the Client: Cient = {client_address} | Data = {ack_server_mod_bytes}")
 			print(f"Forwarding second ack to the Server: Server = {temp_server_address}")
 			print(f"Server does not send answer to second ACK")
 
 
-def writingLogic(chosenAttack, datapacket_client_mod, mode):
+def writingLogic(chosenAttack, datapacket_client_mod, mode, fw_proxy_client, fw_proxy_server, client_address):
 	if chosenAttack == ATTACK_CHANGE_TXT:
 		datapacket_client_mod = applyModRequest(datapacket_client_mod, ATTACK_CHANGE_TXT, mode)
 
@@ -270,7 +270,7 @@ while True:
 
 		while size >= MAX_TRANSFER_TFTP:
 
-				readingLogic(chosenAttack, data_server_mod, mode)
+				readingLogic(chosenAttack, data_server_mod, mode, fw_proxy_client, fw_proxy_server, client_address)
 
 				tftp_data_packet, temp_server_address = fw_proxy_server.recvfrom(BUFFER_TFTP)
 				tftp_data_packet = TFTP(tftp_data_packet)
@@ -287,7 +287,7 @@ while True:
 			if size == 0:
 				data_server_mod = tftp_data_packet
 
-			readingLogic(chosenAttack, data_server_mod, mode)
+			readingLogic(chosenAttack, data_server_mod, mode, fw_proxy_client, fw_proxy_server, client_address)
 
 
 	elif mode == OPCODE_WRITING:
@@ -347,7 +347,7 @@ while True:
 
 			while size >= MAX_TRANSFER_TFTP:
 
-				writingLogic(chosenAttack, datapacket_client_mod, mode)
+				writingLogic(chosenAttack, datapacket_client_mod, mode, fw_proxy_client, fw_proxy_server, client_address)
 
 				datapacket, clientaddress = fw_proxy_client.recvfrom(BUFFER_TFTP)
 				datapacket_client_mod = TFTP(datapacket)
@@ -363,4 +363,4 @@ while True:
 				if size == 0:
 					datapacket_client_mod = datapacket
 
-				writingLogic(chosenAttack, datapacket_client_mod, mode)
+				writingLogic(chosenAttack, datapacket_client_mod, mode, fw_proxy_client, fw_proxy_server, client_address)
