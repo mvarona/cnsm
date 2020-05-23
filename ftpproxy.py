@@ -250,13 +250,18 @@ while keepRunning == True:
 	fw_proxy_client2.send(data)
 
 	print(f"Waiting for 226 from the server")
-	message = fw_proxy_server2.recv(BUFFER_FTP)
+	message = fw_proxy_server.recv(BUFFER_FTP)
 	print(message)
-	fw_proxy_client2.send(message)
+	fw_proxy_client.send(message)
 
 	server_socket2.close()
 	fw_proxy_server2.close()
 	fw_proxy_client2.close()
+
+	fw_proxy_client.close()
+	fw_proxy_server.close()
+	server_socket.close()
+	keepRunning = False
 
 	if chosenAttack == ATTACK_TWICE_CTRL:
 		print(f"Sending again client message:")
