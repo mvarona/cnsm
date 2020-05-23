@@ -198,20 +198,21 @@ while True:
 	message = fw_proxy_client.recv(BUFFER_FTP)
 	print(message)
 
-	port
+	port = 0
 
 	if "PORT" in str(message):
 		start = str(message).find("(")
 		end = str(message).find(")")
 		tuple = str(message)[start+1:end].split(',')
-		port = int(tuple[4])*256 + int(list(filter(str.isdigit, tuple[5]))[0])
+		first = int(tuple[4])
+		second = int(tuple[5].replace("\\r\\n", ""))
+		port = int(first)*256 + int(second)
 
 		#Create the socket to listen on 192.168.40.80:port
 		server_socket2 = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-		server_socket2.setsockopt(socket.SOL_SOCKET, 25, str(INTERFACE_PROXY_SERVER + '\0').encode('utf-8'))
-		server_socket2.bind(("192.168.40.80", port))
-		server_socket2.listen()
-
+		server_socket2.bind(('192.168.30.80', port))
+		server_socket2.listen(1)
+		print(f"Listening on {port}")
 		answer = send(fw_proxy_server, "PORT 192,168,30,80," + tuple[4] + "," + tuple[5])
 		print(f"Waiting for a message from the server to the PORT message")
 		print(answer) # 200 PORT command successful
@@ -222,19 +223,24 @@ while True:
 	print(f"Waiting for a request from the client") # REQUEST: LIST
 	message = fw_proxy_client.recv(BUFFER_FTP)
 	print(message)
-
 	fw_proxy_server.send(message)
+
+	fw_proxy_server2, data_address = server_socket2.accept()
+	print(f"Connected from {data_address}")
+
+
 	print(f"Waiting for an answer from the server") # Response 425: Unable to build data connection: Connection refused
 	answer = fw_proxy_server.recv(BUFFER_FTP)
 	print(answer)
 
+	print(f"Here we should receive 150 Opening ASCII mode")
+	ascii = server_socket2.recv(BUFFER_FTP)
+	print(ascii)
+
 
 	#Accept an incoming connection from the Client
-	server_socket2, data_address = server_socket2.accept() #Program hang
-	print(f"Data connection from {data_address} has been established!")
-
-	print(f"Waiting for a message from the server")
-	print(answer)
+#	server_socket2, data_address = server_socket2.accept() #Program hang
+#	print(f"Data connection from {data_address} has been established!")
 
 
 	#Connect to the server
