@@ -234,13 +234,11 @@ chosenAttack = chooseAttack()
 # Infinite loop to receive and process messages:
 
 while True:
-	
+
 	fw_proxy_server = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 	fw_proxy_server.setsockopt(socket.SOL_SOCKET, 25, str(INTERFACE_NETWORK_PROXY + '\0').encode('utf-8'))
 	fw_proxy_client = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-	
-	# Waiting for a packet:
-	
+
 	print(f"Waiting for rrq/wrq from client")
 	request, client_address = server_socket.recvfrom(BUFFER_TFTP)
 
@@ -266,7 +264,11 @@ while True:
 		if chosenAttack == ATTACK_FILE_NOT_FOUND or chosenAttack == ATTACK_ACCESS_VIOLATION or chosenAttack == ATTACK_FILE_NOT_FOUND_WRQ or chosenAttack == ATTACK_DROP_ERROR:
 			size = SIZE_ERROR_PACK
 		else:
-			size = getBytesForPacket(data_server_mod)
+			data_server_mod.show()
+			if data_server_mod.haslayer("load"):
+				size = getBytesForPacket(data_server_mod)
+			else:
+				size = MAX_TRANSFER_TFTP
 
 		while size >= MAX_TRANSFER_TFTP:
 
@@ -278,7 +280,10 @@ while True:
 				num = countValuesInPacket(tftp_data_packet)
 				printf(f"next num bytes {num}")
 				if num > VALUES_IN_LAST_PACKET_TFTP:
-					size = getBytesForPacket(tftp_data_packet)
+					if tftp_data_packet.haslayer("load"):
+						size = getBytesForPacket(data_server_mod)
+					else:
+						size = MAX_TRANSFER_TFTP
 				else:
 					size = 0
 
@@ -343,7 +348,10 @@ while True:
 			if chosenAttack == ATTACK_FILE_NOT_FOUND or chosenAttack == ATTACK_ACCESS_VIOLATION or chosenAttack == ATTACK_FILE_NOT_FOUND_WRQ or chosenAttack == ATTACK_DROP_ERROR:
 				size = SIZE_ERROR_PACK
 			else:
-				size = getBytesForPacket(datapacket_client_mod)
+				if datapacket_client_mod.haslayer("load"):
+					size = getBytesForPacket(datapacket_client_mod)
+				else:
+					size = MAX_TRANSFER_TFTP
 
 			while size >= MAX_TRANSFER_TFTP:
 
@@ -354,7 +362,10 @@ while True:
 				next = len(vars(datapacket_client_mod))
 
 				if next > VALUES_IN_LAST_PACKET_TFTP:
-					size = len(datapacket_client_mod.load)
+					if datapacket_client_mod.haslayer("load"):
+						size = getBytesForPacket(datapacket_client_mod)
+					else:
+						size = MAX_TRANSFER_TFTP
 				else:
 					size = 0
 
@@ -364,3 +375,6 @@ while True:
 					datapacket_client_mod = datapacket
 
 				writingLogic(chosenAttack, datapacket_client_mod, mode, fw_proxy_client, fw_proxy_server, client_address, server_address)
+
+	fw_proxy_client.close()
+	fw_proxy_server.close()
