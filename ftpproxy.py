@@ -256,18 +256,7 @@ while True:
 	print(f"Waiting for 226 from the server")
 	message = fw_proxy_server2.recv(BUFFER_FTP)
 	print(message)
-	fw_proxy_client.send(message)
-
-	print(f"Waiting for ACK from the client")
-	message = fw_proxy_client2.recv(BUFFER_FTP)
-	print(message)
-	fw_proxy_server2.send(message)
-
-	print(f"Now we will check that no port has anything left to say...")
-	print(fw_proxy_server.recv(BUFFER_FTP))
-	print(fw_proxy_server2.recv(BUFFER_FTP))
-	print(fw_proxy_client2.recv(BUFFER_FTP))
-	print(fw_proxy_client.recv(BUFFER_FTP))
+	fw_proxy_client2.send(message)
 
 	if chosenAttack == ATTACK_TWICE_CTRL:
 		print(f"Sending again client message:")
