@@ -11,6 +11,7 @@ INTERFACE_NETWORK_PROXY = "enp0s3.30"
 POS_OPCODE = 1 # According to RFC 1350
 OPCODE_READING = 1 # According to RFC 1350
 OPCODE_WRITING = 2 # According to RFC 1350
+OPCODE_DATA = 3 # According to RFC 1350
 BUFFER_TFTP = 1024 # According to RFC 1350
 MAX_TRANSFER_TFTP = 512 # According to RFC 1350
 VALUES_IN_LAST_PACKET_TFTP = 1 # According to RFC 1350
@@ -108,9 +109,9 @@ def getBytesForPacket(packet):
 	size = len(packet.load)
 	return size
 
-def countValuesInPacket(packet):
-	num = len(vars(tftp_data_packet))
-	return num
+def packetHasLoad(packet):
+	packet_str = packet.show(dump=True)
+	return "load" in packet_str
 
 def readingLogic(chosenAttack, data_server_mod, mode, fw_proxy_client, fw_proxy_server, client_address, server_address):
 	if chosenAttack == ATTACK_CHANGE_TXT:
@@ -223,9 +224,6 @@ def writingLogic(chosenAttack, datapacket_client_mod, mode, fw_proxy_client, fw_
 		fw_proxy_client.sendto(ack_server_mod_bytes, client_address)
 		print(f"Forwarding second ack to the Client: Client = {client_address}")
 
-server_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-server_socket.bind((IP_PROXY, TFTP_PORT))
-server_address = (IP_SERVER, TFTP_PORT)
 
 # Entry point:
 
@@ -234,6 +232,10 @@ chosenAttack = chooseAttack()
 # Infinite loop to receive and process messages:
 
 while True:
+
+	server_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+	server_socket.bind((IP_PROXY, TFTP_PORT))
+	server_address = (IP_SERVER, TFTP_PORT)
 
 	fw_proxy_server = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 	fw_proxy_server.setsockopt(socket.SOL_SOCKET, 25, str(INTERFACE_NETWORK_PROXY + '\0').encode('utf-8'))
@@ -264,8 +266,7 @@ while True:
 		if chosenAttack == ATTACK_FILE_NOT_FOUND or chosenAttack == ATTACK_ACCESS_VIOLATION or chosenAttack == ATTACK_FILE_NOT_FOUND_WRQ or chosenAttack == ATTACK_DROP_ERROR:
 			size = SIZE_ERROR_PACK
 		else:
-			data_server_mod.show()
-			if data_server_mod.haslayer("load"):
+			if packetHasLoad(data_server_mod):
 				size = getBytesForPacket(data_server_mod)
 			else:
 				size = MAX_TRANSFER_TFTP
@@ -277,13 +278,8 @@ while True:
 				tftp_data_packet, server_address = fw_proxy_server.recvfrom(BUFFER_TFTP)
 				tftp_data_packet = TFTP(tftp_data_packet)
 
-				num = countValuesInPacket(tftp_data_packet)
-				printf(f"next num bytes {num}")
-				if num > VALUES_IN_LAST_PACKET_TFTP:
-					if tftp_data_packet.haslayer("load"):
-						size = getBytesForPacket(data_server_mod)
-					else:
-						size = MAX_TRANSFER_TFTP
+				if packetHasLoad(tftp_data_packet):
+					size = getBytesForPacket(tftp_data_packet)
 				else:
 					size = 0
 
@@ -348,7 +344,7 @@ while True:
 			if chosenAttack == ATTACK_FILE_NOT_FOUND or chosenAttack == ATTACK_ACCESS_VIOLATION or chosenAttack == ATTACK_FILE_NOT_FOUND_WRQ or chosenAttack == ATTACK_DROP_ERROR:
 				size = SIZE_ERROR_PACK
 			else:
-				if datapacket_client_mod.haslayer("load"):
+				if packetHasLoad(datapacket_client_mod):
 					size = getBytesForPacket(datapacket_client_mod)
 				else:
 					size = MAX_TRANSFER_TFTP
@@ -359,13 +355,9 @@ while True:
 
 				datapacket, clientaddress = fw_proxy_client.recvfrom(BUFFER_TFTP)
 				datapacket_client_mod = TFTP(datapacket)
-				next = len(vars(datapacket_client_mod))
 
-				if next > VALUES_IN_LAST_PACKET_TFTP:
-					if datapacket_client_mod.haslayer("load"):
-						size = getBytesForPacket(datapacket_client_mod)
-					else:
-						size = MAX_TRANSFER_TFTP
+				if packetHasLoad(datapacket_client_mod):
+					size = getBytesForPacket(datapacket_client_mod)
 				else:
 					size = 0
 
@@ -378,3 +370,4 @@ while True:
 
 	fw_proxy_client.close()
 	fw_proxy_server.close()
+	server_socket.close()
