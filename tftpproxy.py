@@ -35,6 +35,7 @@ FILE_FORBIDDEN = "forbidden.txt"
 TEXT_CHANGED = "!!!THIS TEXT WAS ALTERED!!!\n"
 UDP_NEW_DPORT = 13
 SIZE_ERROR_PACK = 10
+OP_ILLEGAL = 8
 
 # Functions:
 
@@ -85,11 +86,7 @@ def applyModRequest(packet, chosenAttack, mode):
 		print(f"altered filename = {packet.filename}")
 
 	if chosenAttack == ATTACK_ILLEGAL_OP:
-		if mode == OPCODE_READING:
-			packet.op = OPCODE_WRITING
-		if mode == OPCODE_WRITING:
-			packet.op = OPCODE_READING
-		packet.op = 8
+		packet.op = OP_ILLEGAL
 		print(f"altered op = {packet.op}")
 
 	if chosenAttack == ATTACK_CHANGE_DPORT:
@@ -140,18 +137,22 @@ def readingLogic(chosenAttack, data_server_mod, mode, fw_proxy_client, fw_proxy_
 		print(f"Received RRQ from the Client: Client = {client_address} | Data = {request_mod_bytes}")
 		print(f"Forwarding rrq to the Server: Server = {server_address}")
 
-		tftp_data_packet, server_address = fw_proxy_server.recvfrom(BUFFER_TFTP)
+		if not chosenAttack ==  ATTACK_DROP_ERROR:
+			tftp_data_packet, server_address = fw_proxy_server.recvfrom(BUFFER_TFTP)
 
-		data_server_mod = TFTP(tftp_data_packet)
-		data_server_mod_bytes = bytes(data_server_mod)
+			data_server_mod = TFTP(tftp_data_packet)
+			data_server_mod_bytes = bytes(data_server_mod)
 
-		fw_proxy_client.sendto(data_server_mod_bytes, client_address)
-		print(f"Received data from Server: Server = {server_address} | Data = {data_server_mod_bytes}")
-		print(f"Forwarding data to the Client: Client = {client_address}")
+			fw_proxy_client.sendto(data_server_mod_bytes, client_address)
+			print(f"Received data from Server: Server = {server_address} | Data = {data_server_mod_bytes}")
+			print(f"Forwarding data to the Client: Client = {client_address}")
+		else:
+			print(f"Omitting error forwarding from server to client")
 
 	if not (chosenAttack == ATTACK_FILE_NOT_FOUND or chosenAttack == ATTACK_ACCESS_VIOLATION or chosenAttack == ATTACK_FILE_NOT_FOUND_WRQ or chosenAttack == ATTACK_DROP_ERROR):
+		if chosenAttack == ATTACK_CHANGE_TXT or oldChosenAttack == ATTACK_CHANGE_TXT:
+			return
 		ack_packet, client_address = fw_proxy_client.recvfrom(BUFFER_TFTP)
-
 		ack_server_mod = TFTP(ack_packet)
 		ack_server_mod_bytes = bytes(ack_server_mod)
 
@@ -193,6 +194,7 @@ def readingLogic(chosenAttack, data_server_mod, mode, fw_proxy_client, fw_proxy_
 			print(f"Server does not send answer to second ACK")
 
 
+
 def writingLogic(chosenAttack, datapacket_client_mod, mode, fw_proxy_client, fw_proxy_server, client_address, server_address):
 	if chosenAttack == ATTACK_CHANGE_TXT:
 		datapacket_client_mod = applyModRequest(datapacket_client_mod, ATTACK_CHANGE_TXT, mode)
@@ -226,13 +228,17 @@ def writingLogic(chosenAttack, datapacket_client_mod, mode, fw_proxy_client, fw_
 		print(f"Forwarding second ack to the Client: Client = {client_address}")
 
 
+
 # Entry point:
 
 chosenAttack = chooseAttack()
+oldChosenAttack = chosenAttack
 
 # Infinite loop to receive and process messages:
 
 while True:
+
+	chosenAttack = oldChosenAttack
 
 	server_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 	server_socket.bind((IP_PROXY, TFTP_PORT))
@@ -247,16 +253,16 @@ while True:
 	print(f"Waiting for rrq/wrq from client")
 	request, client_address = server_socket.recvfrom(BUFFER_TFTP)
 
-	mode = request[POS_OPCODE]
-
 	request_mod = TFTP(request)
+
+	mode = request_mod.op
 
 	if chosenAttack == ATTACK_FILE_NOT_FOUND or chosenAttack == ATTACK_ACCESS_VIOLATION or chosenAttack == ATTACK_ILLEGAL_OP or chosenAttack == ATTACK_CHANGE_DPORT or chosenAttack == ATTACK_FILE_NOT_FOUND_WRQ or chosenAttack == ATTACK_DROP_ERROR:
 		request_mod = applyModRequest(request_mod, chosenAttack, mode)
 
 	request_mod_bytes = bytes(request_mod)
 
-	mode = request[POS_OPCODE]
+	mode = request_mod.op
 
 	if mode == OPCODE_READING:
 		fw_proxy_server.sendto(request_mod_bytes, server_address)
@@ -278,17 +284,22 @@ while True:
 
 		while size >= MAX_TRANSFER_TFTP:
 
-				readingLogic(chosenAttack, data_server_mod, mode, fw_proxy_client, fw_proxy_server, client_address, server_address)
+			readingLogic(chosenAttack, data_server_mod, mode, fw_proxy_client, fw_proxy_server, client_address, server_address)
 
-				tftp_data_packet, server_address = fw_proxy_server.recvfrom(BUFFER_TFTP)
-				tftp_data_packet = TFTP(tftp_data_packet)
+			if chosenAttack == ATTACK_CHANGE_TXT:
+				break
 
-				if packetHasLoad(tftp_data_packet):
-					size = getBytesForPacket(tftp_data_packet)
-					lastPacketOfChain = True
-				else:
-					size = 0
-					lastPacketOfChain = True
+			tftp_data_packet, server_address = fw_proxy_server.recvfrom(BUFFER_TFTP)
+			tftp_data_packet = TFTP(tftp_data_packet)
+
+			if packetHasLoad(tftp_data_packet):
+				size = getBytesForPacket(tftp_data_packet)
+				lastPacketOfChain = True
+			else:
+				size = 0
+				lastPacketOfChain = True
+
+			chosenAttack = ATTACK_NO_ATTACK
 
 		if size < MAX_TRANSFER_TFTP:
 
@@ -331,13 +342,6 @@ while True:
 			request, client_address = server_socket.recvfrom(BUFFER_TFTP)
 			request_mod = TFTP(request)
 			print(f"Received WRQ from the Client: Client = {client_address} | Data = {request_mod_bytes}")
-			request_mod = applyModRequest(request_mod, chosenAttack, mode)
-			request_mod_bytes = bytes(request_mod)
-			fw_proxy_server.sendto(request_mod_bytes, server_address)
-			print(f"Forwarding wrq to the Server: Server = {server_address}")
-			ack_packet, server_address = fw_proxy_server.recvfrom(BUFFER_TFTP)
-			ack_server_mod = TFTP(ack_packet)
-			ack_server_mod_bytes = bytes(ack_server_mod)
 			print(f"Received ACK/error from the Server: Server = {server_address} | Data = {ack_server_mod_bytes}")
 			fw_proxy_client.sendto(ack_server_mod_bytes, client_address)
 			print(f"Forwarding ack/error to the Client: Client = {client_address}")
@@ -370,12 +374,17 @@ while True:
 					size = 0
 					lastPacketOfChain = True
 
+				chosenAttack = ATTACK_NO_ATTACK
+
 			if size < MAX_TRANSFER_TFTP:
 
 				if lastPacketOfChain == True:
 					datapacket_client_mod = datapacket
 
 				writingLogic(chosenAttack, datapacket_client_mod, mode, fw_proxy_client, fw_proxy_server, client_address, server_address)
+
+	else:
+		print(f"Unknown op code. Descarting packet...")
 
 	fw_proxy_client.close()
 	fw_proxy_server.close()
