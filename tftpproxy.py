@@ -275,6 +275,7 @@ while True:
 
 				readingLogic(chosenAttack, data_server_mod, mode, fw_proxy_client, fw_proxy_server, client_address, server_address)
 
+				fw_proxy_server.settimeout(2)
 				tftp_data_packet, server_address = fw_proxy_server.recvfrom(BUFFER_TFTP)
 				tftp_data_packet = TFTP(tftp_data_packet)
 
