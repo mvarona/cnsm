@@ -89,6 +89,7 @@ def applyModRequest(packet, chosenAttack, mode):
 			packet.op = OPCODE_WRITING
 		if mode == OPCODE_WRITING:
 			packet.op = OPCODE_READING
+		packet.op = 8
 		print(f"altered op = {packet.op}")
 
 	if chosenAttack == ATTACK_CHANGE_DPORT:
@@ -241,6 +242,8 @@ while True:
 	fw_proxy_server.setsockopt(socket.SOL_SOCKET, 25, str(INTERFACE_NETWORK_PROXY + '\0').encode('utf-8'))
 	fw_proxy_client = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
+	lastPacketOfChain = False
+
 	print(f"Waiting for rrq/wrq from client")
 	request, client_address = server_socket.recvfrom(BUFFER_TFTP)
 
@@ -252,6 +255,8 @@ while True:
 		request_mod = applyModRequest(request_mod, chosenAttack, mode)
 
 	request_mod_bytes = bytes(request_mod)
+
+	mode = request[POS_OPCODE]
 
 	if mode == OPCODE_READING:
 		fw_proxy_server.sendto(request_mod_bytes, server_address)
@@ -275,18 +280,19 @@ while True:
 
 				readingLogic(chosenAttack, data_server_mod, mode, fw_proxy_client, fw_proxy_server, client_address, server_address)
 
-				fw_proxy_server.settimeout(2)
 				tftp_data_packet, server_address = fw_proxy_server.recvfrom(BUFFER_TFTP)
 				tftp_data_packet = TFTP(tftp_data_packet)
 
 				if packetHasLoad(tftp_data_packet):
 					size = getBytesForPacket(tftp_data_packet)
+					lastPacketOfChain = True
 				else:
 					size = 0
+					lastPacketOfChain = True
 
 		if size < MAX_TRANSFER_TFTP:
 
-			if size == 0:
+			if lastPacketOfChain == True:
 				data_server_mod = tftp_data_packet
 
 			readingLogic(chosenAttack, data_server_mod, mode, fw_proxy_client, fw_proxy_server, client_address, server_address)
@@ -336,7 +342,7 @@ while True:
 			fw_proxy_client.sendto(ack_server_mod_bytes, client_address)
 			print(f"Forwarding ack/error to the Client: Client = {client_address}")
 
-		if not (chosenAttack == ATTACK_ACCESS_VIOLATION or chosenAttack == ATTACK_FILE_NOT_FOUND_WRQ or chosenAttack == ATTACK_DROP_ERROR):
+		if not (chosenAttack == ATTACK_FILE_NOT_FOUND or chosenAttack == ATTACK_ACCESS_VIOLATION or chosenAttack == ATTACK_FILE_NOT_FOUND_WRQ or chosenAttack == ATTACK_DROP_ERROR):
 
 			datapacket, clientaddress = fw_proxy_client.recvfrom(BUFFER_TFTP)
 
@@ -359,12 +365,14 @@ while True:
 
 				if packetHasLoad(datapacket_client_mod):
 					size = getBytesForPacket(datapacket_client_mod)
+					lastPacketOfChain = True
 				else:
 					size = 0
+					lastPacketOfChain = True
 
 			if size < MAX_TRANSFER_TFTP:
 
-				if size == 0:
+				if lastPacketOfChain == True:
 					datapacket_client_mod = datapacket
 
 				writingLogic(chosenAttack, datapacket_client_mod, mode, fw_proxy_client, fw_proxy_server, client_address, server_address)
