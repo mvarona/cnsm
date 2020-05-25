@@ -30,6 +30,8 @@ ATTACK_UNEXPECTED_COMMAND = 10
 USER_NONEXISTENT = "USER_NONEXISTENT\r\n"
 COMMAND_EXIT = "QUIT"
 COMMAND_PORT = "PORT"
+COMMAND_TYPE = "TYPE I"
+COMMAND_PUT = "STOR"
 FILE_NONEXISTENT = "nonexistent.txt"
 ERROR_FILE_NOT_FOUND_GET = "550 Permission denied (No such file or folder)\r\n"
 ERROR_UNEXPECTED_COMMAND = "500 List malformed not understood\r\n"
@@ -205,6 +207,18 @@ while keepRunning == True:
 		keepRunning = False
 		break
 
+	if COMMAND_TYPE in message_string:
+		fw_proxy_server.send(message)
+		print(f"Waiting for a message from the server")
+		answer = fw_proxy_server.recv(BUFFER_FTP)
+		print(answer)
+		answer_string = str(answer)
+		fw_proxy_client.send(answer)
+		print(f"Waiting for a message from the client")
+		message = fw_proxy_client.recv(BUFFER_FTP)
+		print(message)
+		message_string = str(message)
+
 	port = 0
 
 	if COMMAND_PORT in str(message):
@@ -229,30 +243,55 @@ while keepRunning == True:
 
 	print(f"Waiting for a request from the client") # REQUEST: LIST
 	message = fw_proxy_client.recv(BUFFER_FTP)
+	message_string = str(message)
 	print(message)
 	fw_proxy_server.send(message)
 
-	fw_proxy_server2, data_address = server_socket2.accept()
-	print(f"Connected from {data_address}")
+	if COMMAND_PUT in message_string:
 
-	print(f"Waiting for an answer from the server") # Response 150: Opening ASCII mode
-	answer = fw_proxy_server.recv(BUFFER_FTP)
-	print(answer)
-	fw_proxy_client.send(answer)
+		#Create the socket to forward the data to the server
+		fw_proxy_server2 = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
-	print(f"Waiting for data from server")
-	data = fw_proxy_server2.recv(BUFFER_FTP)
-	print(data)
+		#Create the socket to receive the data from the client
+		fw_proxy_client2 = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
-	#Create the socket to forward the data to the client
-	fw_proxy_client2 = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-	fw_proxy_client2.connect((IP_CLIENT, port))
-	fw_proxy_client2.send(data)
+		#Accept an incoming connection from the Server
+		fw_proxy_server2, data_address = server_socket2.accept()
+		print(f"Connection from {data_address} has been established!")
 
-	print(f"Waiting for 226 from the server")
-	message = fw_proxy_server.recv(BUFFER_FTP)
-	print(message)
-	fw_proxy_client.send(message)
+		print(f"Waiting for an answer from the server") # Response 150: Opening ASCII mode
+		answer = fw_proxy_server.recv(BUFFER_FTP)
+		print(answer)
+		fw_proxy_client.send(answer)
+
+		fw_proxy_client2.connect((IP_CLIENT, port))
+		print(f"Waiting for data from client")
+		data = fw_proxy_client2.recv(BUFFER_FTP)
+		print(data)
+		fw_proxy_server2.send(data)
+
+	else:
+		fw_proxy_server2, data_address = server_socket2.accept()
+		print(f"Connected from {data_address}")
+
+		print(f"Waiting for an answer from the server") # Response 150: Opening ASCII mode
+		answer = fw_proxy_server.recv(BUFFER_FTP)
+		print(answer)
+		fw_proxy_client.send(answer)
+
+		print(f"Waiting for data from server")
+		data = fw_proxy_server2.recv(BUFFER_FTP)
+		print(data)
+
+		#Create the socket to forward the data to the client
+		fw_proxy_client2 = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+		fw_proxy_client2.connect((IP_CLIENT, port))
+		fw_proxy_client2.send(data)
+
+		print(f"Waiting for 226 from the server")
+		message = fw_proxy_server.recv(BUFFER_FTP)
+		print(message)
+		fw_proxy_client.send(message)
 
 	server_socket2.close()
 	fw_proxy_server2.close()
