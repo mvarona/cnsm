@@ -21,7 +21,7 @@ ATTACK_CHANGE_USER = 2
 ATTACK_DROP_PACK_HSK = 3
 
 USER_NONEXISTENT = "USER_NONEXISTENT\r\n"
-COMMAND_EXIT = "QUIT"
+COMMAND_QUIT = "QUIT"
 COMMAND_PORT = "PORT"
 FILE_NONEXISTENT = "nonexistent.txt"
 
@@ -160,21 +160,9 @@ while keepRunning == True:
 	message = fw_proxy_client.recv(BUFFER_FTP)
 	print(message)
 	message_string = str(message)
-	if COMMAND_EXIT in message_string:
+	if COMMAND_QUIT in message_string:
 		keepRunning = False
 		break
-
-	if COMMAND_TYPE in message_string:
-		fw_proxy_server.send(message)
-		print(f"Waiting for a message from the server")
-		answer = fw_proxy_server.recv(BUFFER_FTP)
-		print(answer)
-		answer_string = str(answer)
-		fw_proxy_client.send(answer)
-		print(f"Waiting for a message from the client")
-		message = fw_proxy_client.recv(BUFFER_FTP)
-		print(message)
-		message_string = str(message)
 
 	port = 0
 
