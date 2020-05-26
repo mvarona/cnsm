@@ -26,7 +26,7 @@ ATTACK_DROP_PACK_HSK = 6
 ATTACK_CHANGE_CHK = 7
 ATTACK_CHANGE_DATA_PORT = 8
 ATTACK_TWICE_DATA = 9
-ATTACK_UNEXPECTED_ARGS = 10
+ATTACK_UNKNOWN_COMMAND = 10
 
 USER_NONEXISTENT = "USER_NONEXISTENT\r\n"
 COMMAND_QUIT = "QUIT"
@@ -35,7 +35,7 @@ COMMAND_TYPE = "TYPE I"
 COMMAND_PUT = "STOR"
 FILE_NONEXISTENT = "nothing.txt"
 TEXT_ALTERED = "!!!THIS TEXT WAS ALTERED!!!\n"
-ARGS_UNKNOWN = " -UNKNOWN_ARG"
+COMMAND_UNKNOWN = "CMD"
 MINIMUM_SCAPY_SIZE_PACKET = 5
 NO_FILE_SCAPY_SIZE_PACKET = -1
 FTP_GET = "RETR "
@@ -67,7 +67,7 @@ def showInitialMenu():
 	print("7\tChange checksum\t\t\tPacket is corrupted(???)")
 	print("8\tSend data to wrong port\t\tConnection refused")
 	print("9\tSend twice data\t\t\tAccept re-sending (??)")
-	print("10\tUnexpected arguments\t\tError 501")
+	print("10\tUnknown command\t\t\tError 500")
 	print("")
 	
 	chosenAttack = input("Chosen attack number: ")
@@ -107,14 +107,6 @@ def applyMod(packet, chosenAttack, fileSize, mode):
 
 	if chosenAttack == ATTACK_CHANGE_CHK:
 		packet.ack = 0
-
-	if chosenAttack == ATTACK_UNEXPECTED_ARGS:
-		load = packet.load
-		if "GET" in load or "STOR" in load:
-			packet.load = packet.load.replace(" ", ARGS_UNKNOWN)
-
-		if "LIST" in load:
-			packet.load = packet.load + ARGS_UNKNOWN
 
 	return packet
 
@@ -292,9 +284,6 @@ while keepRunning == True:
 	if chosenAttack == ATTACK_CHANGE_CHK:
 		message_mod = applyMod(message_mod, chosenAttack, fileSize, mode)
 
-	if chosenAttack == ATTACK_UNEXPECTED_ARGS:
-		message_mod = applyMod(message_mod, chosenAttack, fileSize, mode)
-
 	message_string = str(message_mod)
 	message_mod_bytes = bytes(message_mod)
 	print(message_mod)
@@ -318,6 +307,21 @@ while keepRunning == True:
 			answer = send(fw_proxy_server, COMMAND_QUIT)
 		print(f"Waiting for a message from the server")
 		print(answer)
+		fw_proxy_client.send(answer)
+
+	elif chosenAttack == ATTACK_CHANGE_DATA_PORT:
+		fw_proxy_server.send(message_mod_bytes)
+		print(f"Sent packet with unknown port")
+		print(f"Waiting for an answer from the server")
+		answer = fw_proxy_server.recv(BUFFER_FTP)
+		print(answer)
+
+	elif chosenAttack == ATTACK_UNKNOWN_COMMAND:
+		answer = send(fw_proxy_server, COMMAND_UNKNOWN)
+		print(f"Sent packet with unknown command")
+		print(f"Waiting for an answer from the server")
+		print(answer)
+		print(f"Forwarding answer to client")
 		fw_proxy_client.send(answer)
 
 	else:
