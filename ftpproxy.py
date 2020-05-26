@@ -1,6 +1,7 @@
 import socket
 from scapy.all import *
 import re
+import time
 
 # Constants:
 
@@ -32,9 +33,13 @@ COMMAND_QUIT = "QUIT"
 COMMAND_PORT = "PORT"
 COMMAND_TYPE = "TYPE I"
 COMMAND_PUT = "STOR"
-FILE_NONEXISTENT = "nonexistent.txt"
+FILE_NONEXISTENT = "nothing.txt"
 TEXT_ALTERED = "!!!THIS TEXT WAS ALTERED!!!\n"
 ARGS_UNKNOWN = " -UNKNOWN_ARG"
+MINIMUM_SCAPY_SIZE_PACKET = 5
+NO_FILE_SCAPY_SIZE_PACKET = -1
+FTP_GET = "RETR "
+FTP_PUT = "STOR "
 
 # Functions:
 
@@ -53,15 +58,15 @@ def showInitialMenu():
 	print("#\tError scenario\t\t\tExpected result")
 	print("")
 	print("0\tNo error\t\t\tNormal working")
-	print("1\tFile not found\t\tReturn error code 550")
+	print("1\tFile not found (GET)\t\tReturn error code 550")
 	print("2\tDrop data packet\t\tOther part re-sends packet (???)")
-	print("3\tAlter result\t\tReturn fake result")
+	print("3\tAlter result\t\t\tReturn fake result")
 	print("4\tSend quit command\t\tFinish connection")
 	print("5\tChange username\t\t\tReturn error code 530")
 	print("6\tDrop packet in handshake\tConnection hanged out")
 	print("7\tChange checksum\t\t\tPacket is corrupted(???)")
 	print("8\tSend data to wrong port\t\tConnection refused")
-	print("9\tSend twice data\tAccept re-sending (??)")
+	print("9\tSend twice data\t\t\tAccept re-sending (??)")
 	print("10\tUnexpected arguments\t\tError 501")
 	print("")
 	
@@ -86,7 +91,7 @@ def chooseAttack():
 def applyMod(packet, chosenAttack):
 
 	if chosenAttack == ATTACK_FILE_NOT_FOUND:
-		packet.load = re.sub("test[0-9]*.txt", FILE_NONEXISTENT, packet.load)
+		packet.load = str(packet.load)[2] + FILE_NONEXISTENT
 
 	if chosenAttack == ATTACK_ALTER_RES:
 		packet.load = TEXT_ALTERED
@@ -109,6 +114,19 @@ def applyMod(packet, chosenAttack):
 			packet.load = packet.load + ARGS_UNKNOWN
 
 	return packet
+
+def getFileSize(packet):
+
+	command = str(packet)
+	# Assuming filename includes its size in bytes:
+	size = re.findall("\d+", command)
+	if len(size) != 0:
+		size = size[0]
+	else:
+		# Fallback for LIST command:
+		size = NO_FILE_SCAPY_SIZE_PACKET
+	size = int(size)
+	return size
 
 def buildMockPacket(packet):
 
@@ -254,7 +272,12 @@ while keepRunning == True:
 
 	print(f"Waiting for a request from the client") # REQUEST: LIST / GET / PUT
 	message = fw_proxy_client.recv(BUFFER_FTP)
-	message_mod = TCP(message)
+	message_mod = UDP(message)
+
+	if FTP_GET in str(message):
+		mode = FTP_GET
+	if FTP_PUT in str(message):
+		mode = FTP_PUT
 
 	if chosenAttack == ATTACK_FILE_NOT_FOUND:
 		message_mod = applyMod(message_mod, chosenAttack)
@@ -268,19 +291,27 @@ while keepRunning == True:
 	if chosenAttack == ATTACK_UNEXPECTED_ARGS:
 		message_mod = applyMod(message_mod, chosenAttack)
 
+	fileSize = getFileSize(message_mod)
 	message_string = str(message_mod)
 	message_mod_bytes = bytes(message_mod)
 	print(message_mod)
 	print(f"Forwarding request to server")
-	fw_proxy_server.send(message_mod_bytes)
 
-	if chosenAttack == ATTACK_SEND_QUIT:
-		print(f"Waiting for answer from server")
-		message = fw_proxy_server.recv(BUFFER_FTP)
-		print(message)
-		fw_proxy_client.send(message)
-	
+	if chosenAttack == ATTACK_SEND_QUIT or chosenAttack == ATTACK_FILE_NOT_FOUND:
+
+		newLoad = str(message_mod.load)
+		if mode == FTP_GET:
+			newLoad = FTP_GET + newLoad[2:-1]
+		if mode == FTP_PUT:
+			newLoad = FTP_PUT + newLoad[2:-1]
+
+		answer = send(fw_proxy_server, newLoad)
+		print(f"Waiting for a message from the server")
+		print(answer)
+		fw_proxy_client.send(answer)
+
 	else:
+		fw_proxy_server.send(message_mod_bytes)
 		if COMMAND_PUT in message_string:
 
 			#Create the socket to forward the data to the server
@@ -301,8 +332,11 @@ while keepRunning == True:
 			fw_proxy_client2.connect((IP_CLIENT, port))
 			print(f"Waiting for data from client")
 
-			data = fw_proxy_client2.recv(BUFFER_FTP)
-			data_mod = TCP(data)
+			data_mod = fw_proxy_client2.recv(BUFFER_FTP)
+
+			if fileSize != NO_FILE_SCAPY_SIZE_PACKET and fileSize > MINIMUM_SCAPY_SIZE_PACKET:
+				data_mod = UDP(data_mod)
+
 			data_mod = applyMod(data_mod, chosenAttack)
 			data_mod_bytes = bytes(data_mod)
 			print(data_mod)
@@ -333,8 +367,11 @@ while keepRunning == True:
 			fw_proxy_client.send(answer)
 
 			print(f"Waiting for data from server")
-			data = fw_proxy_server2.recv(BUFFER_FTP)
-			data_mod = TCP(data)
+			data_mod = fw_proxy_server2.recv(BUFFER_FTP)
+
+			if fileSize != NO_FILE_SCAPY_SIZE_PACKET and fileSize > MINIMUM_SCAPY_SIZE_PACKET:
+				data_mod = UDP(data_mod)
+
 			if chosenAttack == ATTACK_ALTER_RES:
 				data_mod = applyMod(data_mod, chosenAttack)
 			data_mod_bytes = bytes(data_mod)
