@@ -268,20 +268,20 @@ while keepRunning == True:
 	if chosenAttack == ATTACK_UNEXPECTED_ARGS:
 		message_mod = applyMod(message_mod, chosenAttack)
 
-		message_string = str(message_mod)
-		message_mod_bytes = bytes(message_mod)
-		print(message_mod)
-		print(f"Forwarding request to server")
-		fw_proxy_server.send(message_mod_bytes)
+	message_string = str(message_mod)
+	message_mod_bytes = bytes(message_mod)
+	print(message_mod)
+	print(f"Forwarding request to server")
+	fw_proxy_server.send(message_mod_bytes)
 
-		if chosenAttack == ATTACK_SEND_QUIT:
-			print(f"Waiting for answer from server")
-			message = fw_proxy_server.recv(BUFFER_FTP)
-			print(message)
-			fw_proxy_client.send(message)
-		
-		else:
-			if COMMAND_PUT in message_string:
+	if chosenAttack == ATTACK_SEND_QUIT:
+		print(f"Waiting for answer from server")
+		message = fw_proxy_server.recv(BUFFER_FTP)
+		print(message)
+		fw_proxy_client.send(message)
+	
+	else:
+		if COMMAND_PUT in message_string:
 
 			#Create the socket to forward the data to the server
 			fw_proxy_server2 = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -335,7 +335,8 @@ while keepRunning == True:
 			print(f"Waiting for data from server")
 			data = fw_proxy_server2.recv(BUFFER_FTP)
 			data_mod = TCP(data)
-			data_mod = applyMod(data_mod, chosenAttack)
+			if chosenAttack == ATTACK_ALTER_RES:
+				data_mod = applyMod(data_mod, chosenAttack)
 			data_mod_bytes = bytes(data_mod)
 			print(data_mod)
 
@@ -373,7 +374,3 @@ while keepRunning == True:
 	fw_proxy_server.close()
 	server_socket.close()
 	keepRunning = False
-
-server_socket.close()
-fw_proxy_server.close()
-fw_proxy_client.close()
