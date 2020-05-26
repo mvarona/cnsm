@@ -1,5 +1,6 @@
 import socket
 from scapy.all import *
+import re
 
 # Constants:
 
@@ -11,30 +12,29 @@ IP_PROXY_SERVER = "192.168.30.80"
 IP_SERVER = "192.168.30.90"
 INTERFACE_PROXY_CLIENT = "enp0s3.30"
 BUFFER_FTP = 1024
-FTP_PASSV_SERVER_CODE = "227" #FTP sends status code 227 in response to a passive request from client
 MIN_ATTACK_NUM = 0
 MAX_ATTACK_NUM = 10
 
 ATTACK_NO_ATTACK = 0
-ATTACK_FILE_NOT_FOUND_GET = 1
-ATTACK_TWICE_CTRL = 2
-ATTACK_ALTER_LIST = 3
+ATTACK_FILE_NOT_FOUND = 1
+ATTACK_DROP_PACK = 2
+ATTACK_ALTER_RES = 3
 ATTACK_SEND_QUIT = 4
 ATTACK_CHANGE_USER = 5
 ATTACK_DROP_PACK_HSK = 6
 ATTACK_CHANGE_CHK = 7
 ATTACK_CHANGE_DATA_PORT = 8
-ATTACK_TWICE_LIST = 9
-ATTACK_UNEXPECTED_COMMAND = 10
+ATTACK_TWICE_DATA = 9
+ATTACK_UNEXPECTED_ARGS = 10
 
 USER_NONEXISTENT = "USER_NONEXISTENT\r\n"
-COMMAND_EXIT = "QUIT"
+COMMAND_QUIT = "QUIT"
 COMMAND_PORT = "PORT"
 COMMAND_TYPE = "TYPE I"
 COMMAND_PUT = "STOR"
 FILE_NONEXISTENT = "nonexistent.txt"
-ERROR_FILE_NOT_FOUND_GET = "550 Permission denied (No such file or folder)\r\n"
-ERROR_UNEXPECTED_COMMAND = "500 List malformed not understood\r\n"
+TEXT_ALTERED = "!!!THIS TEXT WAS ALTERED!!!\n"
+ARGS_UNKNOWN = " -UNKNOWN_ARG"
 
 # Functions:
 
@@ -53,16 +53,16 @@ def showInitialMenu():
 	print("#\tError scenario\t\t\tExpected result")
 	print("")
 	print("0\tNo error\t\t\tNormal working")
-	print("1\tFile not found on get\t\tReturn error code 550")
-	print("2\tSend twice PASV message\t\tServer returns different port")
-	print("3\tAlter result list (ls)\t\tReturn fake result")
+	print("1\tFile not found\t\tReturn error code 550")
+	print("2\tDrop data packet\t\tOther part re-sends packet (???)")
+	print("3\tAlter result\t\tReturn fake result")
 	print("4\tSend quit command\t\tFinish connection")
 	print("5\tChange username\t\t\tReturn error code 530")
 	print("6\tDrop packet in handshake\tConnection hanged out")
-	print("7\tChange checksum\t\t\tPacket is corrupted")
+	print("7\tChange checksum\t\t\tPacket is corrupted(???)")
 	print("8\tSend data to wrong port\t\tConnection refused")
-	print("9\tDuplicate result list (ls)\tAccept re-sending")
-	print("10\tUnexpected arguments\t\tError")
+	print("9\tSend twice data\tAccept re-sending (??)")
+	print("10\tUnexpected arguments\t\tError 501")
 	print("")
 	
 	chosenAttack = input("Chosen attack number: ")
@@ -84,22 +84,29 @@ def chooseAttack():
 	return chosenAttack
 
 def applyMod(packet, chosenAttack):
+
+	if chosenAttack == ATTACK_FILE_NOT_FOUND:
+		packet.load = re.sub("test[0-9]*.txt", FILE_NONEXISTENT, packet.load)
+
+	if chosenAttack == ATTACK_ALTER_RES:
+		packet.load = TEXT_ALTERED
+
 	if chosenAttack == ATTACK_CHANGE_USER:
 		packet.load = USER_NONEXISTENT
-
-	if chosenAttack == ATTACK_ALTER_LIST:
-		packet.load = FILE_NONEXISTENT + "\r\n"
 
 	if chosenAttack == ATTACK_SEND_QUIT:
 		packet.load = COMMAND_QUIT
 
 	if chosenAttack == ATTACK_CHANGE_CHK:
-		packet.show()
-		packet.ack = 0
-		packet.seq = 0
-		packet.dport = 1230
 		packet.chksum = 0
-		packet.show()
+
+	if chosenAttack == ATTACK_UNEXPECTED_ARGS:
+		load = packet.load
+		if "GET" in load or "STOR" in load:
+			packet.load = packet.load.replace(" ", ARGS_UNKNOWN)
+
+		if "LIST" in load:
+			packet.load = packet.load + ARGS_UNKNOWN
 
 	return packet
 
@@ -203,7 +210,8 @@ while keepRunning == True:
 	message = fw_proxy_client.recv(BUFFER_FTP)
 	print(message)
 	message_string = str(message)
-	if COMMAND_EXIT in message_string:
+
+	if COMMAND_QUIT in message_string:
 		keepRunning = False
 		break
 
@@ -229,6 +237,9 @@ while keepRunning == True:
 		second = int(tuple[5].replace("\\r\\n", ""))
 		port = int(first)*256 + int(second)
 
+		if chosenAttack == ATTACK_CHANGE_DATA_PORT:
+			port = int(second)*256 + int(first)
+
 		#Create the socket to listen on 192.168.30.80:port
 		server_socket2 = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 		server_socket2.bind(('192.168.30.80', port))
@@ -241,139 +252,127 @@ while keepRunning == True:
 
 	#Create the socket to forward the data to the server
 
-	print(f"Waiting for a request from the client") # REQUEST: LIST
+	print(f"Waiting for a request from the client") # REQUEST: LIST / GET / PUT
 	message = fw_proxy_client.recv(BUFFER_FTP)
-	message_string = str(message)
-	print(message)
-	fw_proxy_server.send(message)
+	message_mod = TCP(message)
 
-	if COMMAND_PUT in message_string:
+	if chosenAttack == ATTACK_FILE_NOT_FOUND:
+		message_mod = applyMod(message_mod, chosenAttack)
 
-		#Create the socket to forward the data to the server
-		fw_proxy_server2 = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+	if chosenAttack == ATTACK_SEND_QUIT:
+		message_mod = applyMod(message_mod, chosenAttack)
 
-		#Create the socket to receive the data from the client
-		fw_proxy_client2 = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+	if chosenAttack == ATTACK_CHANGE_CHK:
+		message_mod = applyMod(message_mod, chosenAttack)
 
-		#Accept an incoming connection from the Server
-		fw_proxy_server2, data_address = server_socket2.accept()
-		print(f"Connection from {data_address} has been established!")
+	if chosenAttack == ATTACK_UNEXPECTED_ARGS:
+		message_mod = applyMod(message_mod, chosenAttack)
 
-		print(f"Waiting for an answer from the server") # Response 150: Opening ASCII mode
-		answer = fw_proxy_server.recv(BUFFER_FTP)
-		print(answer)
-		fw_proxy_client.send(answer)
+		message_string = str(message_mod)
+		message_mod_bytes = bytes(message_mod)
+		print(message_mod)
+		print(f"Forwarding request to server")
+		fw_proxy_server.send(message_mod_bytes)
 
-		fw_proxy_client2.connect((IP_CLIENT, port))
-		print(f"Waiting for data from client")
-		data = fw_proxy_client2.recv(BUFFER_FTP)
-		print(data)
-		fw_proxy_server2.send(data)
+		if chosenAttack == ATTACK_SEND_QUIT:
+			print(f"Waiting for answer from server")
+			message = fw_proxy_server.recv(BUFFER_FTP)
+			print(message)
+			fw_proxy_client.send(message)
+		
+		else:
+			if COMMAND_PUT in message_string:
 
-	else:
-		fw_proxy_server2, data_address = server_socket2.accept()
-		print(f"Connected from {data_address}")
+			#Create the socket to forward the data to the server
+			fw_proxy_server2 = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
-		print(f"Waiting for an answer from the server") # Response 150: Opening ASCII mode
-		answer = fw_proxy_server.recv(BUFFER_FTP)
-		print(answer)
-		fw_proxy_client.send(answer)
+			#Create the socket to receive the data from the client
+			fw_proxy_client2 = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
-		print(f"Waiting for data from server")
-		data = fw_proxy_server2.recv(BUFFER_FTP)
-		print(data)
+			#Accept an incoming connection from the Server
+			fw_proxy_server2, data_address = server_socket2.accept()
+			print(f"Connection from {data_address} has been established!")
 
-		#Create the socket to forward the data to the client
-		fw_proxy_client2 = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-		fw_proxy_client2.connect((IP_CLIENT, port))
-		fw_proxy_client2.send(data)
+			print(f"Waiting for an answer from the server") # Response 150: Opening ASCII mode
+			answer = fw_proxy_server.recv(BUFFER_FTP)
+			print(answer)
+			fw_proxy_client.send(answer)
+
+			fw_proxy_client2.connect((IP_CLIENT, port))
+			print(f"Waiting for data from client")
+
+			data = fw_proxy_client2.recv(BUFFER_FTP)
+			data_mod = TCP(data)
+			data_mod = applyMod(data_mod, chosenAttack)
+			data_mod_bytes = bytes(data_mod)
+			print(data_mod)
+
+			if chosenAttack == ATTACK_DROP_PACK:
+				print(f"Omitting forwarding to server...")
+				print(f"Waiting for re-sending from client")
+				data = fw_proxy_client2.recv(BUFFER_FTP)
+				print(data)
+
+			print(f"Forwarding received data to server")
+			fw_proxy_server2.send(data_mod_bytes)
+
+			if chosenAttack == ATTACK_TWICE_DATA:
+				print(f"Forwarding for second time received data to server")
+				fw_proxy_server2.send(data_mod_bytes)
+				print(f"Waiting for answer from client")
+				data = fw_proxy_client2.recv(BUFFER_FTP)
+				print(data)
+
+		else:
+			fw_proxy_server2, data_address = server_socket2.accept()
+			print(f"Connected from {data_address}")
+
+			print(f"Waiting for an answer from the server") # Response 150: Opening ASCII mode
+			answer = fw_proxy_server.recv(BUFFER_FTP)
+			print(answer)
+			fw_proxy_client.send(answer)
+
+			print(f"Waiting for data from server")
+			data = fw_proxy_server2.recv(BUFFER_FTP)
+			data_mod = TCP(data)
+			data_mod = applyMod(data_mod, chosenAttack)
+			data_mod_bytes = bytes(data_mod)
+			print(data_mod)
+
+			#Create the socket to forward the data to the client
+			fw_proxy_client2 = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+			fw_proxy_client2.connect((IP_CLIENT, port))
+
+			if chosenAttack == ATTACK_DROP_PACK:
+				print(f"Omitting forwarding to client...")
+				print(f"Waiting for re-sending from server")
+				data = fw_proxy_server2.recv(BUFFER_FTP)
+				print(data)
+
+			print(f"Forwarding received data to client")
+			fw_proxy_client2.send(data_mod_bytes)
+
+			if chosenAttack == ATTACK_TWICE_DATA:
+				print(f"Forwarding for second time received data to client")
+				fw_proxy_client2.send(data_mod_bytes)
+				print(f"Waiting for answer from server")
+				data = fw_proxy_server2.recv(BUFFER_FTP)
+				print(data)
 
 		print(f"Waiting for 226 from the server")
 		message = fw_proxy_server.recv(BUFFER_FTP)
 		print(message)
 		fw_proxy_client.send(message)
 
-	server_socket2.close()
-	fw_proxy_server2.close()
-	fw_proxy_client2.close()
+		server_socket2.close()
+		fw_proxy_server2.close()
+		fw_proxy_client2.close()
+	
 
 	fw_proxy_client.close()
 	fw_proxy_server.close()
 	server_socket.close()
 	keepRunning = False
-
-	if chosenAttack == ATTACK_TWICE_CTRL:
-		print(f"Sending again client message:")
-		print(message)
-		fw_proxy_server.send(message)
-		print(f"Waiting for a message from the server")
-		answer = fw_proxy_server.recv(BUFFER_FTP)
-		print(answer)
-
-	if FTP_PASSV_SERVER_CODE in answer_string:
-		start = answer_string.find("(")
-		end = answer_string.find(")")
-		tuple = answer_string[start+1:end].split(',')
-		port = int(tuple[4])*256 + int(tuple[5])
-
-		#Accept an incoming connection from the Client
-		fw_proxy_client2, client_address2 = server_socket.accept()
-		print(f"Connection from {client_address2} has been established!")
-
-		print(f"Here Waiting for a message from the client")
-		message = fw_proxy_client2.recv(BUFFER_FTP)
-		print(message)
-		fw_proxy_server.send(message)
-
-		if chosenAttack == ATTACK_CHANGE_DATA_PORT:
-			port = int(tuple[5])*256 + int(tuple[4])
-
-		dataSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-		dataSocket.connect((IP_SERVER, port))
-
-		if chosenAttack == ATTACK_SEND_QUIT:
-			request = send(fw_proxy_server, COMMAND_QUIT)
-		elif chosenAttack == ATTACK_FILE_NOT_FOUND_GET:
-			request = send(fw_proxy_server, "GET " + FILE_NONEXISTENT + "\r\n")
-		elif chosenAttack == ATTACK_UNEXPECTED_COMMAND:
-			request = send(fw_proxy_server, "LIST_MALFORMED" + "\r\n")
-		else:
-			request = send(fw_proxy_server, "LISTA")
-
-		if chosenAttack == ATTACK_CHANGE_DATA_PORT:
-			print(f"Waiting for a message from the server")
-			answer = fw_proxy_server.recv(BUFFER_FTP)
-			print(answer)
-
-		#command = IP(src="192.168.30.80", dst=IP_SERVER)/TCP(sport=11000,dport=21)/"LIST"
-		#command.show()
-		#fw_proxy_server.send(bytes(("LIST").encode('utf-8')))
-
-		if chosenAttack == ATTACK_FILE_NOT_FOUND_GET:
-			error = ERROR_FILE_NOT_FOUND_GET
-			fw_proxy_client.send(bytes((error).encode('utf-8')))
-
-		elif chosenAttack == ATTACK_UNEXPECTED_COMMAND:
-			error = ERROR_UNEXPECTED_COMMAND
-			fw_proxy_client.send(bytes((error).encode('utf-8')))
-		else:
-			answerToRequest = dataSocket.recv(BUFFER_FTP * 2)
-			answerToRequestFTP = TCP(answerToRequest)
-
-			if chosenAttack == ATTACK_ALTER_LIST:
-				answerToRequestFTP = applyMod(answerToRequestFTP, chosenAttack)
-
-			if chosenAttack == ATTACK_CHANGE_CHK:
-				answerToRequestFTP = applyMod(answerToRequestFTP, chosenAttack)
-
-			answerToRequestFTP_bytes = bytes(answerToRequestFTP)
-			print(f"AnswerToRequest: {answerToRequest}")
-			fw_proxy_client.send(answerToRequestFTP_bytes)
-
-			if chosenAttack == ATTACK_TWICE_LIST:
-				fw_proxy_client.send(answerToRequestFTP_bytes)
-
-		dataSocket.close()
 
 server_socket.close()
 fw_proxy_server.close()
