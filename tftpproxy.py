@@ -52,7 +52,7 @@ def showInitialMenu():
 	print("5\tFile not found (WRQ)\tReturn error code 1")
 	print("6\tDrop client packet\tClient retransmits request")
 	print("7\tDrop ACK client (RRQ)\tServer retransmits last byte")
-	print("8\tChange block number\t???")
+	print("8\tChange block num. (RRQ)\tClient retransmits request")
 	print("9\tSend ACK twice\t\tSecond ACK is ignored")
 	print("10\tModify file text\tOther part accepts text")
 	print("")
@@ -117,6 +117,23 @@ def readingLogic(chosenAttack, data_server_mod, mode, fw_proxy_client, fw_proxy_
 
 	if chosenAttack == ATTACK_CHANGE_BLOCK:
 		data_server_mod = applyModRequest(data_server_mod, chosenAttack, mode)
+		data_server_mod_bytes = bytes(data_server_mod)
+		fw_proxy_client.sendto(data_server_mod_bytes, client_address)
+		print(f"Received data from Server: Server = {server_address} | Data = {data_server_mod_bytes}")
+		print(f"Forwarding data to the Client: Client = {client_address}")
+		print(f"Waiting for request re-sending from client")
+
+		request, client_address = fw_proxy_client.recvfrom(BUFFER_TFTP)
+
+		request_mod = TFTP(request)
+		request_mod_bytes = bytes(request_mod)
+
+		fw_proxy_server.sendto(request_mod_bytes, server_address)
+		print(f"Received RRQ from the Client: Client = {client_address} | Data = {request_mod_bytes}")
+		print(f"Forwarding rrq to the Server: Server = {server_address}")
+
+		tftp_data_packet, server_address = fw_proxy_server.recvfrom(BUFFER_TFTP)
+		data_server_mod = TFTP(tftp_data_packet)
 
 	data_server_mod_bytes = bytes(data_server_mod)
 
@@ -208,12 +225,12 @@ def writingLogic(chosenAttack, datapacket_client_mod, mode, fw_proxy_client, fw_
 		datapacket_client_mod = applyModRequest(datapacket_client_mod, chosenAttack, mode)
 
 	if chosenAttack == ATTACK_CHANGE_BLOCK:
-		data_server_mod = applyModRequest(data_server_mod, chosenAttack, mode)
+		chosenAttack == ATTACK_NO_ATTACK
 
 	datapacket_client_mod_bytes = bytes(datapacket_client_mod)
 
 	fw_proxy_server.sendto(datapacket_client_mod_bytes, server_address)
-	print(f"Received Data-Packet from Client: Client = {clientaddress} | Data = {datapacket_client_mod_bytes}")
+	print(f"Received Data-Packet from Client: Client = {client_address} | Data = {datapacket_client_mod_bytes}")
 	print(f"Forwarding data to the Server: Server = {server_address}")
 
 	if not chosenAttack == ATTACK_TWICE_ACK:
