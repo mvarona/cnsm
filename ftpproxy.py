@@ -43,7 +43,7 @@ FTP_PUT = "STOR "
 
 # Functions:
 
-def send(socket, msg):
+def sendMsg(socket, msg):
 	print("===>sending: " + msg)
 	msgBytes = (msg + "\r\n").encode('utf-8')
 	socket.send(msgBytes)
@@ -59,14 +59,14 @@ def showInitialMenu():
 	print("")
 	print("0\tNo error\t\t\tNormal working")
 	print("1\tFile not found (GET)\t\tReturn error code 550")
-	print("2\tDrop data packet\t\tOther part re-sends packet (???)")
+	print("2\tDrop data packet\t\tOther part re-sends packet")
 	print("3\tAlter result\t\t\tReturn fake result")
 	print("4\tSend quit command\t\tFinish connection")
 	print("5\tChange username\t\t\tReturn error code 530")
 	print("6\tDrop packet in handshake\tConnection hanged out")
-	print("7\tSend twice ACK\t\t\tSecond ACK is ignored (window decreased?)")
+	print("7\tSend twice ACK\t\t\tWindow size is decreased")
 	print("8\tSend data to wrong port\t\tConnection refused")
-	print("9\tSend twice data\t\t\tAccept re-sending (??)")
+	print("9\tSend twice data\t\t\tAccept re-sending")
 	print("10\tUnknown command\t\t\tError 500")
 	print("")
 	
@@ -208,6 +208,7 @@ keepRunning = True
 while keepRunning == True:
 	print(f"Waiting for a message from the client")
 	message = fw_proxy_client.recv(BUFFER_FTP)
+	message_string = str(message)
 	print(message)
 	fw_proxy_server.send(message)
 	print(f"Waiting for a message from the server")
@@ -216,223 +217,238 @@ while keepRunning == True:
 	answer_string = str(answer)
 	fw_proxy_client.send(answer)
 
-	print(f"Waiting for a message from the client")
-	message = fw_proxy_client.recv(BUFFER_FTP)
-	print(message)
-	message_string = str(message)
-
 	if COMMAND_QUIT in message_string:
-		keepRunning = False
-
-	if COMMAND_TYPE in message_string:
 		fw_proxy_server.send(message)
 		print(f"Waiting for a message from the server")
 		answer = fw_proxy_server.recv(BUFFER_FTP)
 		print(answer)
 		answer_string = str(answer)
 		fw_proxy_client.send(answer)
+		keepRunning = False
+	else:
+
 		print(f"Waiting for a message from the client")
 		message = fw_proxy_client.recv(BUFFER_FTP)
 		print(message)
 		message_string = str(message)
 
-	port = 0
-
-	if COMMAND_PORT in str(message):
-		start = str(message).find("(")
-		end = str(message).find(")")
-		tuple = str(message)[start+1:end].split(',')
-		first = int(tuple[4])
-		second = int(tuple[5].replace("\\r\\n", ""))
-		port = int(first)*256 + int(second)
-
-		if chosenAttack == ATTACK_CHANGE_DATA_PORT:
-			port = int(second)*256 + int(first)
-
-		#Create the socket to listen on 192.168.30.80:port
-		server_socket2 = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-		server_socket2.bind(('192.168.30.80', port))
-		server_socket2.listen(1)
-		print(f"Listening on {port}")
-		answer = send(fw_proxy_server, "PORT 192,168,30,80," + tuple[4] + "," + tuple[5])
-		print(f"Waiting for a message from the server to the PORT message")
-		print(answer) # 200 PORT command successful
-		fw_proxy_client.send(answer)
-
-	#Create the socket to forward the data to the server
-
-	print(f"Waiting for a request from the client") # REQUEST: LIST / GET / PUT
-	message = fw_proxy_client.recv(BUFFER_FTP)
-
-	if chosenAttack == ATTACK_TWICE_ACK:
-		message_mod = TCP(message)
-	else:
-		message_mod = UDP(message)
-
-	fileSize = getFileSize(message_mod)
-	mode = None
-
-	if FTP_GET in str(message):
-		mode = FTP_GET
-	if FTP_PUT in str(message):
-		mode = FTP_PUT
-
-	if chosenAttack == ATTACK_FILE_NOT_FOUND:
-		message_mod = applyMod(message_mod, chosenAttack, fileSize, mode)
-
-	if chosenAttack == ATTACK_TWICE_ACK:
-		print(f"Sending second ACK to client")
-		sport = message_mod.sport
-		dport = message_mod.dport
-		lastAck = message_mod.ack
-		lastSeq = message_mod.seq
-
-		ip = IP(src=IP_PROXY_CLIENT, dst=IP_CLIENT)
-		ACK = TCP(sport=sport, dport=FTP_CONTROL_PORT, flags='A', seq=lastAck + 1, ack=SYNACK.lastSeq + 1)
-		send(ip/ACK)
-
-		print(f"Waiting for answer from client")
-		message = fw_proxy_client.recv(BUFFER_FTP)
-		print(message)
-
-	message_string = str(message_mod)
-	message_mod_bytes = bytes(message_mod)
-	print(message_mod)
-	print(f"Forwarding request to server")
-
-	if chosenAttack == ATTACK_SEND_QUIT or chosenAttack == ATTACK_FILE_NOT_FOUND:
-		newLoad = ""
-		if fileSize != NO_FILE_SCAPY_SIZE_PACKET and fileSize > MINIMUM_SCAPY_SIZE_PACKET:
-			newLoad = str(message_mod.load)
-		else:
-			newLoad = str(message_mod)
-
-		if mode == FTP_GET:
-			newLoad = FTP_GET + newLoad[2:-1]
-		if mode == FTP_PUT:
-			newLoad = FTP_PUT + newLoad[2:-1]
-
-		if chosenAttack == ATTACK_FILE_NOT_FOUND:
-			answer = send(fw_proxy_server, newLoad)
-		elif chosenAttack == ATTACK_SEND_QUIT:
-			answer = send(fw_proxy_server, COMMAND_QUIT)
+		if COMMAND_QUIT in message_string:
+			fw_proxy_server.send(message)
+			print(f"Waiting for a message from the server")
+			answer = fw_proxy_server.recv(BUFFER_FTP)
+			print(answer)
+			answer_string = str(answer)
+			fw_proxy_client.send(answer)
 			keepRunning = False
 
-		print(f"Waiting for a message from the server")
-		print(answer)
-		fw_proxy_client.send(answer)
+		if keepRunning == True:
 
-	elif chosenAttack == ATTACK_CHANGE_DATA_PORT:
-		fw_proxy_server.send(message_mod_bytes)
-		print(f"Sent packet with unknown port")
-		print(f"Waiting for an answer from the server")
-		answer = fw_proxy_server.recv(BUFFER_FTP)
-		print(answer)
+			if COMMAND_TYPE in message_string:
+				fw_proxy_server.send(message)
+				print(f"Waiting for a message from the server")
+				answer = fw_proxy_server.recv(BUFFER_FTP)
+				print(answer)
+				answer_string = str(answer)
+				fw_proxy_client.send(answer)
+				print(f"Waiting for a message from the client")
+				message = fw_proxy_client.recv(BUFFER_FTP)
+				print(message)
+				message_string = str(message)
 
-	elif chosenAttack == ATTACK_UNKNOWN_COMMAND:
-		answer = send(fw_proxy_server, COMMAND_UNKNOWN)
-		print(f"Sent packet with unknown command")
-		print(f"Waiting for an answer from the server")
-		print(answer)
-		print(f"Forwarding answer to client")
-		fw_proxy_client.send(answer)
+			port = 0
 
-	else:
-		fw_proxy_server.send(message_mod_bytes)
+			if COMMAND_PORT in str(message):
+				start = str(message).find("(")
+				end = str(message).find(")")
+				tuple = str(message)[start+1:end].split(',')
+				first = int(tuple[4])
+				second = int(tuple[5].replace("\\r\\n", ""))
+				port = int(first)*256 + int(second)
 
-		if COMMAND_PUT in message_string:
+				if chosenAttack == ATTACK_CHANGE_DATA_PORT:
+					port = int(second)*256 + int(first)
+
+				#Create the socket to listen on 192.168.30.80:port
+				server_socket2 = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+				server_socket2.bind(('192.168.30.80', port))
+				server_socket2.listen(1)
+				print(f"Listening on {port}")
+				answer = sendMsg(fw_proxy_server, "PORT 192,168,30,80," + tuple[4] + "," + tuple[5])
+				print(f"Waiting for a message from the server to the PORT message")
+				print(answer) # 200 PORT command successful
+				fw_proxy_client.send(answer)
 
 			#Create the socket to forward the data to the server
-			fw_proxy_server2 = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
-			#Create the socket to receive the data from the client
-			fw_proxy_client2 = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+			print(f"Waiting for a request from the client") # REQUEST: LIST / GET / PUT
+			message = fw_proxy_client.recv(BUFFER_FTP)
 
-			#Accept an incoming connection from the Server
-			fw_proxy_server2, data_address = server_socket2.accept()
-			print(f"Connection from {data_address} has been established!")
+			if chosenAttack == ATTACK_TWICE_ACK:
+				message_mod = TCP(message)
+			else:
+				message_mod = UDP(message)
 
-			print(f"Waiting for an answer from the server") # Response 150: Opening ASCII mode
-			answer = fw_proxy_server.recv(BUFFER_FTP)
-			print(answer)
-			fw_proxy_client.send(answer)
+			fileSize = getFileSize(message_mod)
+			mode = None
 
-			fw_proxy_client2.connect((IP_CLIENT, port))
-			print(f"Waiting for data from client")
+			if FTP_GET in str(message):
+				mode = FTP_GET
+			if FTP_PUT in str(message):
+				mode = FTP_PUT
 
-			data_mod = fw_proxy_client2.recv(BUFFER_FTP)
+			if chosenAttack == ATTACK_FILE_NOT_FOUND:
+				message_mod = applyMod(message_mod, chosenAttack, fileSize, mode)
 
-			if fileSize != NO_FILE_SCAPY_SIZE_PACKET and fileSize > MINIMUM_SCAPY_SIZE_PACKET:
-				data_mod = UDP(data_mod)
+			if chosenAttack == ATTACK_TWICE_ACK:
+				print(f"Sending second ACK to client")
+				sport = message_mod.sport
+				dport = message_mod.dport
+				lastAck = message_mod.ack
+				lastSeq = message_mod.seq
 
-			data_mod = applyMod(data_mod, chosenAttack, fileSize, mode)
-			data_mod_bytes = bytes(data_mod)
-			print(data_mod)
+				ip = IP(src=IP_PROXY_CLIENT, dst=IP_CLIENT)
+				ack = TCP(sport=sport, dport=FTP_CONTROL_PORT, flags='A', seq=lastAck, ack=lastSeq)
+				send(ip/ack)
+				print(f"Client accepts DUP ACK")
 
-			if chosenAttack == ATTACK_DROP_PACK:
-				print(f"Omitting forwarding to server...")
-				print(f"Waiting for re-sending from client")
-				data = fw_proxy_client2.recv(BUFFER_FTP)
+			message_string = str(message_mod)
+			message_mod_bytes = bytes(message_mod)
+			print(message_mod)
+			print(f"Forwarding request to server")
 
-			print(f"Forwarding received data to server")
-			fw_proxy_server2.send(data_mod_bytes)
+			if chosenAttack == ATTACK_SEND_QUIT or chosenAttack == ATTACK_FILE_NOT_FOUND:
+				newLoad = ""
+				if fileSize != NO_FILE_SCAPY_SIZE_PACKET and fileSize > MINIMUM_SCAPY_SIZE_PACKET:
+					newLoad = str(message_mod.load)
+				else:
+					newLoad = str(message_mod)
 
-			if chosenAttack == ATTACK_TWICE_DATA:
-				print(f"Forwarding for second time received data to server")
-				fw_proxy_server2.send(data_mod_bytes)
-				print(f"Waiting for answer from client")
-				data = fw_proxy_client2.recv(BUFFER_FTP)
-				print(data)
+				if mode == FTP_GET:
+					newLoad = FTP_GET + newLoad[2:-1]
+				if mode == FTP_PUT:
+					newLoad = FTP_PUT + newLoad[2:-1]
 
-		else:
-			fw_proxy_server2, data_address = server_socket2.accept()
-			print(f"Connected from {data_address}")
+				if chosenAttack == ATTACK_FILE_NOT_FOUND:
+					answer = sendMsg(fw_proxy_server, newLoad)
+				elif chosenAttack == ATTACK_SEND_QUIT:
+					answer = sendMsg(fw_proxy_server, COMMAND_QUIT)
+					keepRunning = False
 
-			print(f"Waiting for an answer from the server") # Response 150: Opening ASCII mode
-			answer = fw_proxy_server.recv(BUFFER_FTP)
-			print(answer)
-			fw_proxy_client.send(answer)
+				print(f"Waiting for a message from the server")
+				print(answer)
+				fw_proxy_client.send(answer)
 
-			print(f"Waiting for data from server")
-			data_mod = fw_proxy_server2.recv(BUFFER_FTP)
+			elif chosenAttack == ATTACK_CHANGE_DATA_PORT:
+				fw_proxy_server.send(message_mod_bytes)
+				print(f"Sent packet with unknown port")
+				print(f"Waiting for an answer from the server")
+				answer = fw_proxy_server.recv(BUFFER_FTP)
+				print(answer)
 
-			if fileSize != NO_FILE_SCAPY_SIZE_PACKET and fileSize > MINIMUM_SCAPY_SIZE_PACKET:
-				data_mod = UDP(data_mod)
+			elif chosenAttack == ATTACK_UNKNOWN_COMMAND:
+				answer = sendMsg(fw_proxy_server, COMMAND_UNKNOWN)
+				print(f"Sent packet with unknown command")
+				print(f"Waiting for an answer from the server")
+				print(answer)
+				print(f"Forwarding answer to client")
+				fw_proxy_client.send(answer)
 
-			if chosenAttack == ATTACK_ALTER_RES:
-				data_mod = applyMod(data_mod, chosenAttack, fileSize, mode)
-			data_mod_bytes = bytes(data_mod)
-			print(data_mod)
+			else:
+				fw_proxy_server.send(message_mod_bytes)
 
-			#Create the socket to forward the data to the client
-			fw_proxy_client2 = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-			fw_proxy_client2.connect((IP_CLIENT, port))
+				if COMMAND_PUT in message_string:
 
-			if chosenAttack == ATTACK_DROP_PACK:
-				print(f"Omitting forwarding to client...")
-				print(f"Waiting for re-sending from server")
-				data = fw_proxy_server2.recv(BUFFER_FTP)
+					#Create the socket to forward the data to the server
+					fw_proxy_server2 = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
-			print(f"Forwarding received data to client")
-			fw_proxy_client2.send(data_mod_bytes)
+					#Create the socket to receive the data from the client
+					fw_proxy_client2 = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
-			if chosenAttack == ATTACK_TWICE_DATA:
-				print(f"Forwarding for second time received data to client")
-				fw_proxy_client2.send(data_mod_bytes)
-				print(f"Waiting for answer from server")
-				data = fw_proxy_server2.recv(BUFFER_FTP)
-				print(data)
+					#Accept an incoming connection from the Server
+					fw_proxy_server2, data_address = server_socket2.accept()
+					print(f"Connection from {data_address} has been established!")
 
-		print(f"Waiting for 226 from the server")
-		message = fw_proxy_server.recv(BUFFER_FTP)
-		print(message)
-		fw_proxy_client.send(message)
+					print(f"Waiting for an answer from the server") # Response 150: Opening ASCII mode
+					answer = fw_proxy_server.recv(BUFFER_FTP)
+					print(answer)
+					fw_proxy_client.send(answer)
 
-		server_socket2.close()
-		fw_proxy_server2.close()
-		fw_proxy_client2.close()
+					fw_proxy_client2.connect((IP_CLIENT, port))
+					print(f"Waiting for data from client")
 
-		if keepRunning == False:
-			fw_proxy_client.close()
-			fw_proxy_server.close()
-			server_socket.close()
+					data_mod = fw_proxy_client2.recv(BUFFER_FTP)
+
+					if fileSize != NO_FILE_SCAPY_SIZE_PACKET and fileSize > MINIMUM_SCAPY_SIZE_PACKET:
+						data_mod = UDP(data_mod)
+
+					data_mod = applyMod(data_mod, chosenAttack, fileSize, mode)
+					data_mod_bytes = bytes(data_mod)
+					print(data_mod)
+
+					if chosenAttack == ATTACK_DROP_PACK:
+						print(f"Omitting forwarding to server...")
+						print(f"Waiting for re-sending from client")
+						data = fw_proxy_client2.recv(BUFFER_FTP)
+
+					print(f"Forwarding received data to server")
+					fw_proxy_server2.send(data_mod_bytes)
+
+					if chosenAttack == ATTACK_TWICE_DATA:
+						print(f"Forwarding for second time received data to server")
+						fw_proxy_server2.send(data_mod_bytes)
+						print(f"Waiting for answer from client")
+						data = fw_proxy_client2.recv(BUFFER_FTP)
+						print(data)
+
+				else:
+					fw_proxy_server2, data_address = server_socket2.accept()
+					print(f"Connected from {data_address}")
+
+					print(f"Waiting for an answer from the server") # Response 150: Opening ASCII mode
+					answer = fw_proxy_server.recv(BUFFER_FTP)
+					print(answer)
+					fw_proxy_client.send(answer)
+
+					print(f"Waiting for data from server")
+					data_mod = fw_proxy_server2.recv(BUFFER_FTP)
+
+					if fileSize != NO_FILE_SCAPY_SIZE_PACKET and fileSize > MINIMUM_SCAPY_SIZE_PACKET:
+						data_mod = UDP(data_mod)
+
+					if chosenAttack == ATTACK_ALTER_RES:
+						data_mod = applyMod(data_mod, chosenAttack, fileSize, mode)
+					data_mod_bytes = bytes(data_mod)
+					print(data_mod)
+
+					#Create the socket to forward the data to the client
+					fw_proxy_client2 = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+					fw_proxy_client2.connect((IP_CLIENT, port))
+
+					if chosenAttack == ATTACK_DROP_PACK:
+						print(f"Omitting forwarding to client...")
+						print(f"Waiting for re-sending from server")
+						data = fw_proxy_server2.recv(BUFFER_FTP)
+
+					print(f"Forwarding received data to client")
+					fw_proxy_client2.send(data_mod_bytes)
+
+					if chosenAttack == ATTACK_TWICE_DATA:
+						print(f"Forwarding for second time received data to client")
+						fw_proxy_client2.send(data_mod_bytes)
+						print(f"Waiting for answer from server")
+						data = fw_proxy_server2.recv(BUFFER_FTP)
+						print(data)
+
+				print(f"Waiting for 226 from the server")
+				message = fw_proxy_server.recv(BUFFER_FTP)
+				print(message)
+				fw_proxy_client.send(message)
+
+				server_socket2.close()
+				fw_proxy_server2.close()
+				fw_proxy_client2.close()
+
+	if keepRunning == False:
+		fw_proxy_client.close()
+		fw_proxy_server.close()
+		server_socket.close()
