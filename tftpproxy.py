@@ -205,7 +205,10 @@ def readingLogic(chosenAttack, data_server_mod, mode, fw_proxy_client, fw_proxy_
 
 def writingLogic(chosenAttack, datapacket_client_mod, mode, fw_proxy_client, fw_proxy_server, client_address, server_address):
 	if chosenAttack == ATTACK_CHANGE_TXT:
-		datapacket_client_mod = applyModRequest(datapacket_client_mod, ATTACK_CHANGE_TXT, mode)
+		datapacket_client_mod = applyModRequest(datapacket_client_mod, chosenAttack, mode)
+
+	if chosenAttack == ATTACK_CHANGE_BLOCK:
+		data_server_mod = applyModRequest(data_server_mod, chosenAttack, mode)
 
 	datapacket_client_mod_bytes = bytes(datapacket_client_mod)
 
