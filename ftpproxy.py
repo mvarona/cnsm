@@ -66,7 +66,7 @@ def showInitialMenu():
 	print("6\tDrop packet in handshake\tConnection hanged out")
 	print("7\tSend twice ACK\t\t\tWindow size is decreased")
 	print("8\tSend data to wrong port\t\tConnection refused")
-	print("9\tSend twice data\t\t\tAccept re-sending")
+	print("9\tSend twice data\t\t\tAccept extra data")
 	print("10\tUnknown command\t\t\tError 500")
 	print("")
 	
