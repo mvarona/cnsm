@@ -50,7 +50,7 @@ def showInitialMenu():
 	print("3\tIllegal TFTP op.\tServer discards request")
 	print("4\tChange ACK number\tOther part retransmits data")
 	print("5\tFile not found (WRQ)\tReturn error code 1")
-	print("6\tDrop client packet\tClient retransmits request")
+	print("6\tDrop server packet\tClient retransmits request")
 	print("7\tDrop ACK client (RRQ)\tServer retransmits last block")
 	print("8\tChange block num. (RRQ)\tClient retransmits request")
 	print("9\tSend ACK twice\t\tSecond ACK is ignored")
