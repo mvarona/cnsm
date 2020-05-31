@@ -51,7 +51,7 @@ def showInitialMenu():
 	print("4\tChange ACK number\tOther part retransmits data")
 	print("5\tFile not found (WRQ)\tReturn error code 1")
 	print("6\tDrop client packet\tClient retransmits request")
-	print("7\tDrop ACK client (RRQ)\tServer retransmits last byte")
+	print("7\tDrop ACK client (RRQ)\tServer retransmits last block")
 	print("8\tChange block num. (RRQ)\tClient retransmits request")
 	print("9\tSend ACK twice\t\tSecond ACK is ignored")
 	print("10\tModify file text\tOther part accepts text")
