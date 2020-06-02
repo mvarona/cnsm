@@ -168,7 +168,7 @@ def readingLogic(chosenAttack, data_server_mod, mode, fw_proxy_client, fw_proxy_
 		print(f"Forwarding data to the Client: Client = {client_address}")
 
 	if not (chosenAttack == ATTACK_FILE_NOT_FOUND):
-		if chosenAttack == ATTACK_CHANGE_TXT or oldChosenAttack == ATTACK_CHANGE_TXT:
+		if chosenAttack == ATTACK_CHANGE_TXT or oldChosenAttack == ATTACK_CHANGE_TXT or chosenAttack == ATTACK_ILLEGAL_OP:
 			return
 		ack_packet, client_address = fw_proxy_client.recvfrom(BUFFER_TFTP)
 		ack_server_mod = TFTP(ack_packet)
