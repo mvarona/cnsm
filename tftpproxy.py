@@ -87,6 +87,8 @@ def applyModRequest(packet, chosenAttack, mode):
 
 	if chosenAttack == ATTACK_ILLEGAL_OP:
 		packet.op = OP_ILLEGAL
+		packet.show()
+		packet.op = 3
 		print(f"altered op = {packet.op}")
 
 	if chosenAttack == ATTACK_CHANGE_ACK:
