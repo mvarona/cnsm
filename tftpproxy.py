@@ -225,7 +225,7 @@ def writingLogic(chosenAttack, datapacket_client_mod, mode, fw_proxy_client, fw_
 	if chosenAttack == ATTACK_CHANGE_TXT:
 		datapacket_client_mod = applyModRequest(datapacket_client_mod, chosenAttack, mode)
 
-	if chosenAttack == ATTACK_CHANGE_BLOCK:
+	if chosenAttack == ATTACK_CHANGE_BLOCK or chosenAttack == ATTACK_FILE_NOT_FOUND:
 		chosenAttack == ATTACK_NO_ATTACK
 
 	datapacket_client_mod_bytes = bytes(datapacket_client_mod)
