@@ -76,6 +76,10 @@ def chooseAttack():
 	return chosenAttack
 
 def applyModRequest(packet, chosenAttack, mode):
+
+	if chosenAttack == ATTACK_NO_ATTACK:
+		return packet
+
 	if chosenAttack == ATTACK_FILE_NOT_FOUND or chosenAttack == ATTACK_FILE_NOT_FOUND_WRQ:
 		packet.filename = FILE_NONEXISTENT
 		print(f"altered filename = {packet.filename}")
@@ -224,8 +228,9 @@ def writingLogic(chosenAttack, datapacket_client_mod, mode, fw_proxy_client, fw_
 	if chosenAttack == ATTACK_CHANGE_TXT:
 		datapacket_client_mod = applyModRequest(datapacket_client_mod, chosenAttack, mode)
 
-	if chosenAttack == ATTACK_CHANGE_BLOCK:
+	if chosenAttack == ATTACK_CHANGE_BLOCK or chosenAttack == ATTACK_FILE_NOT_FOUND:
 		chosenAttack == ATTACK_NO_ATTACK
+		datapacket_client_mod = applyModRequest(datapacket_client_mod, chosenAttack, mode)
 
 	datapacket_client_mod_bytes = bytes(datapacket_client_mod)
 
