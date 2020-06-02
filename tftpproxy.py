@@ -390,7 +390,7 @@ while True:
 
 			datapacket_client_mod = TFTP(datapacket)
 
-			if chosenAttack == ATTACK_FILE_NOT_FOUND or chosenAttack == ATTACK_ACCESS_VIOLATION or chosenAttack == ATTACK_FILE_NOT_FOUND_WRQ:
+			if chosenAttack == ATTACK_ACCESS_VIOLATION or chosenAttack == ATTACK_FILE_NOT_FOUND_WRQ:
 				size = SIZE_ERROR_PACK
 			else:
 				if packetHasLoad(datapacket_client_mod):
