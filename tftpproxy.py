@@ -86,9 +86,10 @@ def applyModRequest(packet, chosenAttack, mode):
 		print(f"altered filename = {packet.filename}")
 
 	if chosenAttack == ATTACK_ILLEGAL_OP:
-		packet.op = OP_ILLEGAL
-		packet.show()
-		packet.op = 3
+		if mode == OPCODE_READING:
+			packet.op = OPCODE_WRITING
+		else:
+			packet.op = OPCODE_READING
 		print(f"altered op = {packet.op}")
 
 	if chosenAttack == ATTACK_CHANGE_ACK:
