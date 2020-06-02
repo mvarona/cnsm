@@ -81,7 +81,7 @@ def applyModRequest(packet, chosenAttack, mode):
 		packet.filename = FILE_NONEXISTENT
 		print(f"altered filename = {packet.filename}")
 
-	if chosenAttack == ATTACK_ACCESS_VIOLATION:
+	if chosenAttack == ATTACK_ACCESS_VIOLATION and mode == OPCODE_WRITING:
 		packet.filename = FILE_FORBIDDEN
 		print(f"altered filename = {packet.filename}")
 
