@@ -258,7 +258,7 @@ def writingLogic(chosenAttack, datapacket_client_mod, mode, fw_proxy_client, fw_
 			fw_proxy_client.sendto(ack_server_mod_bytes, client_address)
 			fw_proxy_client.sendto(ack_server_mod_bytes, client_address)
 			print(f"Received ACK from the Server: Server = {server_address} | Data = {ack_server_mod_bytes}")
-
+			print(f"Forwarding ack to the Client: Client = {client_address}")
 
 
 	else:
