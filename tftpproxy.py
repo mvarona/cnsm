@@ -164,7 +164,7 @@ def readingLogic(chosenAttack, data_server_mod, mode, fw_proxy_client, fw_proxy_
 		print(f"Received data from Server: Server = {server_address} | Data = {data_server_mod_bytes}")
 		print(f"Forwarding data to the Client: Client = {client_address}")
 
-	if not (chosenAttack == ATTACK_FILE_NOT_FOUND or chosenAttack == ATTACK_ACCESS_VIOLATION or chosenAttack == ATTACK_FILE_NOT_FOUND_WRQ):
+	if not (chosenAttack == ATTACK_FILE_NOT_FOUND):
 		if chosenAttack == ATTACK_CHANGE_TXT or oldChosenAttack == ATTACK_CHANGE_TXT:
 			return
 		ack_packet, client_address = fw_proxy_client.recvfrom(BUFFER_TFTP)
@@ -321,7 +321,7 @@ while True:
 		data_server_mod = TFTP(tftp_data_packet)
 		size = 0
 
-		if chosenAttack == ATTACK_FILE_NOT_FOUND or chosenAttack == ATTACK_ACCESS_VIOLATION or chosenAttack == ATTACK_FILE_NOT_FOUND_WRQ:
+		if chosenAttack == ATTACK_FILE_NOT_FOUND:
 			size = SIZE_ERROR_PACK
 		else:
 			if packetHasLoad(data_server_mod):
@@ -389,14 +389,11 @@ while True:
 			datapacket, clientaddress = fw_proxy_client.recvfrom(BUFFER_TFTP)
 
 			datapacket_client_mod = TFTP(datapacket)
-
-			if chosenAttack == ATTACK_ACCESS_VIOLATION or chosenAttack == ATTACK_FILE_NOT_FOUND_WRQ:
-				size = SIZE_ERROR_PACK
+			
+			if packetHasLoad(datapacket_client_mod):
+				size = getBytesForPacket(datapacket_client_mod)
 			else:
-				if packetHasLoad(datapacket_client_mod):
-					size = getBytesForPacket(datapacket_client_mod)
-				else:
-					size = MAX_TRANSFER_TFTP
+				size = MAX_TRANSFER_TFTP
 
 			while size >= MAX_TRANSFER_TFTP:
 
