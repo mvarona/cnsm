@@ -309,7 +309,6 @@ while keepRunning == True:
 				ip = IP(src=IP_PROXY_CLIENT, dst=IP_CLIENT)
 				ack = TCP(sport=sport, dport=FTP_CONTROL_PORT, flags='A', seq=lastAck, ack=lastSeq)
 				send(ip/ack)
-				send(ip/ack)
 				print(f"Client accepts DUP ACK")
 
 			message_string = str(message_mod)
