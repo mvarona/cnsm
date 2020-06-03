@@ -38,8 +38,8 @@ TEXT_ALTERED = "!!!THIS TEXT WAS ALTERED!!!\n"
 COMMAND_UNKNOWN = "CMD"
 MINIMUM_SCAPY_SIZE_PACKET = 5
 NO_FILE_SCAPY_SIZE_PACKET = -1
-FTP_GET = "RETR "
-FTP_PUT = "STOR "
+FTP_GET = "RETR " # According to RFC 959
+FTP_PUT = "STOR " # According to RFC 959
 
 # Functions:
 
@@ -52,7 +52,7 @@ def sendMsg(socket, msg):
 	return recv
 
 def showInitialMenu():
-	print("*** Welcome to ftpproxuy ***")
+	print("*** Welcome to ftpproxy ***")
 	print("Please, choose one of the following attacks to be carried out:")
 	print("")
 	print("#\tError scenario\t\t\tExpected result")
@@ -91,9 +91,13 @@ def chooseAttack():
 def applyMod(packet, chosenAttack, fileSize, mode):
 
 	if chosenAttack == ATTACK_FILE_NOT_FOUND:
+
+		# Append error filename:
 		packet.load = str(packet.load)[2] + FILE_NONEXISTENT
 
 	if chosenAttack == ATTACK_ALTER_RES:
+		
+		# Scapy does not build the packet if it is too small:
 		if fileSize != NO_FILE_SCAPY_SIZE_PACKET and fileSize > MINIMUM_SCAPY_SIZE_PACKET:
 			packet.load = TEXT_ALTERED
 		else:
@@ -110,7 +114,8 @@ def applyMod(packet, chosenAttack, fileSize, mode):
 def getFileSize(packet):
 
 	command = str(packet)
-	# Assuming filename includes its size in bytes:
+	
+	# Assuming file includes its size on bytes on its name:
 	size = re.findall("\d+", command)
 	if len(size) != 0:
 		size = size[0]
@@ -120,49 +125,35 @@ def getFileSize(packet):
 	size = int(size)
 	return size
 
-def buildMockPacket(packet):
-
-	print(f"Incoming packet:")
-	packet.show()
-	print(f"Altered built packet:")
-	packet = packet.__class__(str(packet))
-	packet.load = "LIST"
-	packet.sport = 12850
-	packet.dport = 12320
-	packet = TCP(packet)
-	packet.show()
-
-	return packet
-
 
 # Entry point:
 
 chosenAttack = chooseAttack()
 
-#Create the socket to listen on 192.168.40.80:21
+# Create the socket to listen on port 21 of proxy-client IP:
 server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 server_socket.bind((IP_PROXY_CLIENT, FTP_CONTROL_PORT))
 server_socket.listen(1)
 
-#Create the socket to forward the data to the server
+# Create the socket to forward the data to the server:
 fw_proxy_server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 fw_proxy_server.setsockopt(socket.SOL_SOCKET, 25, str(INTERFACE_PROXY_CLIENT + '\0').encode('utf-8'))
 
-#Accept an incoming connection from the Client
+# Accept an incoming connection from the client:
 fw_proxy_client, client_address = server_socket.accept()
 print(f"Connection from {client_address} has been established!")
 
-#Connect to the server
+# Connect to the server:
 fw_proxy_server.connect((IP_SERVER, FTP_CONTROL_PORT))
 
-#Proxy receives welcome message from the server and forwards it to the client
+# Proxy receives welcome message from the server and forwards it to the client:
 welcome_message = fw_proxy_server.recv(BUFFER_FTP)
 welcome_messageFTP = TCP(welcome_message)
 welcome_messageFTP_bytes = bytes(welcome_messageFTP)
 print(welcome_message)
 fw_proxy_client.send(welcome_messageFTP_bytes)
 
-#Proxy receives username from client and forwards it to the server
+# Proxy receives username from client and forwards it to the server:
 username = fw_proxy_client.recv(BUFFER_FTP)
 usernameFTP = UDP(username)
 
@@ -174,15 +165,14 @@ print(usernameFTP_bytes)
 print(username)
 fw_proxy_server.send(usernameFTP_bytes)
 
-#Proxy receives password prompt from the server and forwards it to the client
+# Proxy receives password prompt from the server and forwards it to the client:
 password_prompt = fw_proxy_server.recv(BUFFER_FTP)
 password_promptFTP = TCP(password_prompt)
 password_promptFTP_bytes = bytes(password_promptFTP)
 print(password_prompt)
 fw_proxy_client.send(password_promptFTP_bytes)
 
-#Proxy receives password from the client and forwards it to the server
-
+# Proxy receives password from the client and forwards it to the server:
 password = fw_proxy_client.recv(BUFFER_FTP)
 passwordFTP = TCP(password)
 passwordFTP_bytes = bytes(passwordFTP)
@@ -197,13 +187,14 @@ if chosenAttack == ATTACK_DROP_PACK_HSK:
 
 fw_proxy_server.send(passwordFTP_bytes)
 
-#Proxy receives login message from the server and forwards it to the client
+# Proxy receives login message from the server and forwards it to the client:
 login_message = fw_proxy_server.recv(BUFFER_FTP)
 login_messageFTP = TCP(login_message)
 login_messageFTP_bytes = bytes(login_messageFTP)
 print(login_message)
 fw_proxy_client.send(login_messageFTP_bytes)
 
+# Infinite loop to receive all the requests:
 keepRunning = True
 while keepRunning == True:
 	print(f"Waiting for a message from the client")
@@ -218,6 +209,7 @@ while keepRunning == True:
 	fw_proxy_client.send(answer)
 
 	if COMMAND_QUIT in message_string:
+		# If client sends quit as first message:
 		fw_proxy_server.send(message)
 		print(f"Waiting for a message from the server")
 		answer = fw_proxy_server.recv(BUFFER_FTP)
@@ -233,6 +225,7 @@ while keepRunning == True:
 		message_string = str(message)
 
 		if COMMAND_QUIT in message_string:
+			# If client sends quit after a command: 
 			fw_proxy_server.send(message)
 			print(f"Waiting for a message from the server")
 			answer = fw_proxy_server.recv(BUFFER_FTP)
@@ -244,6 +237,7 @@ while keepRunning == True:
 		if keepRunning == True:
 
 			if COMMAND_TYPE in message_string:
+				# TYPE I message:
 				fw_proxy_server.send(message)
 				print(f"Waiting for a message from the server")
 				answer = fw_proxy_server.recv(BUFFER_FTP)
@@ -258,6 +252,7 @@ while keepRunning == True:
 			port = 0
 
 			if COMMAND_PORT in str(message):
+				# PORT message:
 				start = str(message).find("(")
 				end = str(message).find(")")
 				tuple = str(message)[start+1:end].split(',')
@@ -268,9 +263,9 @@ while keepRunning == True:
 				if chosenAttack == ATTACK_CHANGE_DATA_PORT:
 					port = int(second)*256 + int(first)
 
-				#Create the socket to listen on 192.168.30.80:port
+				# Create the socket to listen on specified port of proxy-server IP:
 				server_socket2 = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-				server_socket2.bind(('192.168.30.80', port))
+				server_socket2.bind((IP_PROXY_SERVER, port))
 				server_socket2.listen(1)
 				print(f"Listening on {port}")
 				answer = sendMsg(fw_proxy_server, "PORT 192,168,30,80," + tuple[4] + "," + tuple[5])
@@ -278,7 +273,7 @@ while keepRunning == True:
 				print(answer) # 200 PORT command successful
 				fw_proxy_client.send(answer)
 
-			#Create the socket to forward the data to the server
+			# Create the socket to forward the data to the server:
 
 			print(f"Waiting for a request from the client") # REQUEST: LIST / GET / PUT
 			message = fw_proxy_client.recv(BUFFER_FTP)
@@ -290,6 +285,8 @@ while keepRunning == True:
 
 			fileSize = getFileSize(message_mod)
 			mode = None
+
+			# Get the mode of request:
 
 			if FTP_GET in str(message):
 				mode = FTP_GET
@@ -323,6 +320,7 @@ while keepRunning == True:
 				else:
 					newLoad = str(message_mod)
 
+				# We append re-build the load:
 				if mode == FTP_GET:
 					newLoad = FTP_GET + newLoad[2:-1]
 				if mode == FTP_PUT:
@@ -358,13 +356,15 @@ while keepRunning == True:
 
 				if COMMAND_PUT in message_string:
 
-					#Create the socket to forward the data to the server
+					# PUT REQUEST:
+
+					# Create the socket to forward the data to the server:
 					fw_proxy_server2 = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
-					#Create the socket to receive the data from the client
+					# Create the socket to receive the data from the client:
 					fw_proxy_client2 = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
-					#Accept an incoming connection from the Server
+					# Accept an incoming connection from the server:
 					fw_proxy_server2, data_address = server_socket2.accept()
 					print(f"Connection from {data_address} has been established!")
 
@@ -401,6 +401,9 @@ while keepRunning == True:
 						print(data)
 
 				else:
+
+					# GET OR LIST REQUEST:
+
 					fw_proxy_server2, data_address = server_socket2.accept()
 					print(f"Connected from {data_address}")
 
@@ -420,7 +423,7 @@ while keepRunning == True:
 					data_mod_bytes = bytes(data_mod)
 					print(data_mod)
 
-					#Create the socket to forward the data to the client
+					# Create the socket to forward the data to the client:
 					fw_proxy_client2 = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 					fw_proxy_client2.connect((IP_CLIENT, port))
 
@@ -444,9 +447,13 @@ while keepRunning == True:
 				print(message)
 				fw_proxy_client.send(message)
 
+				# We close data-channel sockets:
+
 				server_socket2.close()
 				fw_proxy_server2.close()
 				fw_proxy_client2.close()
+
+	# We close control-channel sockets:
 
 	if keepRunning == False:
 		fw_proxy_client.close()
