@@ -427,6 +427,9 @@ while keepRunning == True:
 					if chosenAttack == ATTACK_DROP_PACK:
 						print(f"Omitting forwarding to client...")
 						print(f"Waiting for re-sending from server")
+						fw_proxy_client = 0
+						fw_proxy_server = 0
+						server_socket = 0
 						data = fw_proxy_server2.recv(BUFFER_FTP)
 
 					print(f"Forwarding received data to client")
