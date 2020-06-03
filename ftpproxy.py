@@ -309,6 +309,7 @@ while keepRunning == True:
 				ip = IP(src=IP_PROXY_CLIENT, dst=IP_CLIENT)
 				ack = TCP(sport=sport, dport=FTP_CONTROL_PORT, flags='A', seq=lastAck, ack=lastSeq)
 				send(ip/ack)
+				send(ip/ack)
 				print(f"Client accepts DUP ACK")
 
 			message_string = str(message_mod)
@@ -427,9 +428,6 @@ while keepRunning == True:
 					if chosenAttack == ATTACK_DROP_PACK:
 						print(f"Omitting forwarding to client...")
 						print(f"Waiting for re-sending from server")
-						fw_proxy_client = 0
-						fw_proxy_server = 0
-						server_socket = 0
 						data = fw_proxy_server2.recv(BUFFER_FTP)
 
 					print(f"Forwarding received data to client")
