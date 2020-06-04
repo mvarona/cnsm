@@ -397,12 +397,12 @@ while True:
 
 			if packetHasLoad(tftp_data_packet):
 				size = getBytesForPacket(tftp_data_packet)
-				lastPacketOfChain = True
+				print(f"SIZE NEXT BLOCK: {size}")
 			else:
 				size = 0
 				lastPacketOfChain = True
 
-			# Restore attack in case of ACK change to avoid infinite loop:
+			# Do not restore attack in case of a change of ACK, to see it:
 
 			if chosenAttack != ATTACK_CHANGE_ACK:
 				chosenAttack = ATTACK_NO_ATTACK
@@ -411,8 +411,8 @@ while True:
 
 			# We only need one-time-logic for size < 512 bytes:
 
-			if lastPacketOfChain == True:
-				data_server_mod = tftp_data_packet
+#			if lastPacketOfChain == True:
+			data_server_mod = tftp_data_packet
 
 			readingLogic(chosenAttack, data_server_mod, mode, fw_proxy_client, fw_proxy_server, client_address, server_address)
 
@@ -480,7 +480,6 @@ while True:
 
 				if packetHasLoad(datapacket_client_mod):
 					size = getBytesForPacket(datapacket_client_mod)
-					lastPacketOfChain = True
 				else:
 					size = 0
 					lastPacketOfChain = True
@@ -494,8 +493,8 @@ while True:
 
 				# We only need one-time-logic for size < 512 bytes:
 
-				if lastPacketOfChain == True:
-					datapacket_client_mod = datapacket
+#				if lastPacketOfChain == True:
+				datapacket_client_mod = datapacket
 
 				writingLogic(chosenAttack, datapacket_client_mod, mode, fw_proxy_client, fw_proxy_server, client_address, server_address)
 
