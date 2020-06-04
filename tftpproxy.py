@@ -335,9 +335,6 @@ while True:
 	fw_proxy_server.setsockopt(socket.SOL_SOCKET, 25, str(INTERFACE_NETWORK_PROXY + '\0').encode('utf-8'))
 	fw_proxy_client = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
-	# Variable to control whether it is the last block or not:
-	lastPacketOfChain = False
-
 	print(f"Waiting for rrq/wrq from client")
 	request, client_address = server_socket.recvfrom(BUFFER_TFTP)
 
@@ -390,17 +387,15 @@ while True:
 			if chosenAttack == ATTACK_CHANGE_TXT:
 				break
 
-			tftp_data_packet, server_address = fw_proxy_server.recvfrom(BUFFER_TFTP)
-			tftp_data_packet = TFTP(tftp_data_packet)
+			data_server, server_address = fw_proxy_server.recvfrom(BUFFER_TFTP)
+			data_server_mod = TFTP(data_server)
 
 			# Calculate size of the following packet:
 
-			if packetHasLoad(tftp_data_packet):
-				size = getBytesForPacket(tftp_data_packet)
-				print(f"SIZE NEXT BLOCK: {size}")
+			if packetHasLoad(data_server_mod):
+				size = getBytesForPacket(data_server_mod)
 			else:
 				size = 0
-				lastPacketOfChain = True
 
 			# Do not restore attack in case of a change of ACK, to see it:
 
@@ -410,9 +405,6 @@ while True:
 		if size < MAX_TRANSFER_TFTP:
 
 			# We only need one-time-logic for size < 512 bytes:
-
-#			if lastPacketOfChain == True:
-			data_server_mod = tftp_data_packet
 
 			readingLogic(chosenAttack, data_server_mod, mode, fw_proxy_client, fw_proxy_server, client_address, server_address)
 
@@ -482,7 +474,6 @@ while True:
 					size = getBytesForPacket(datapacket_client_mod)
 				else:
 					size = 0
-					lastPacketOfChain = True
 
 				# Restore attack in case of ACK change to avoid infinite loop:
 
@@ -492,9 +483,6 @@ while True:
 			if size < MAX_TRANSFER_TFTP:
 
 				# We only need one-time-logic for size < 512 bytes:
-
-#				if lastPacketOfChain == True:
-				datapacket_client_mod = datapacket
 
 				writingLogic(chosenAttack, datapacket_client_mod, mode, fw_proxy_client, fw_proxy_server, client_address, server_address)
 
