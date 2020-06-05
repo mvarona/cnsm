@@ -171,8 +171,6 @@ while True:
 	fw_proxy_server.setsockopt(socket.SOL_SOCKET, 25, str(INTERFACE_NETWORK_PROXY + '\0').encode('utf-8'))
 	fw_proxy_client = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
-	lastPacketOfChain = False
-
 	print(f"Waiting for rrq/wrq from client")
 	request, client_address = server_socket.recvfrom(BUFFER_TFTP)
 
@@ -209,22 +207,17 @@ while True:
 
 			readingLogic(chosenAttack, data_server_mod, mode, fw_proxy_client, fw_proxy_server, client_address, server_address)
 
-			tftp_data_packet, server_address = fw_proxy_server.recvfrom(BUFFER_TFTP)
-			tftp_data_packet = TFTP(tftp_data_packet)
+			data_server, server_address = fw_proxy_server.recvfrom(BUFFER_TFTP)
+			data_server_mod = TFTP(data_server)
 
-			if packetHasLoad(tftp_data_packet):
-				size = getBytesForPacket(tftp_data_packet)
-				lastPacketOfChain = True
+			if packetHasLoad(data_server_mod):
+				size = getBytesForPacket(data_server_mod)
 			else:
 				size = 0
-				lastPacketOfChain = True
 
 			chosenAttack = ATTACK_NO_ATTACK
 
 		if size < MAX_TRANSFER_TFTP:
-
-			if lastPacketOfChain == True:
-				data_server_mod = tftp_data_packet
 
 			readingLogic(chosenAttack, data_server_mod, mode, fw_proxy_client, fw_proxy_server, client_address, server_address)
 
@@ -279,17 +272,12 @@ while True:
 
 				if packetHasLoad(datapacket_client_mod):
 					size = getBytesForPacket(datapacket_client_mod)
-					lastPacketOfChain = True
 				else:
 					size = 0
-					lastPacketOfChain = True
 
 				chosenAttack = ATTACK_NO_ATTACK
 
 			if size < MAX_TRANSFER_TFTP:
-
-				if lastPacketOfChain == True:
-					datapacket_client_mod = datapacket
 
 				writingLogic(chosenAttack, datapacket_client_mod, mode, fw_proxy_client, fw_proxy_server, client_address, server_address)
 
