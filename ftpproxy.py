@@ -5,8 +5,8 @@ import time
 
 # Constants:
 
-FTP_CONTROL_PORT = 21 # FTP works over TCP on its port 21
-FTP_DATA_PORT = 20 # FTP works over TCP on its port 20
+FTP_CONTROL_PORT = 21 # FTP control channel works on port 21
+FTP_DATA_PORT = 20 # FTP data channel works on port 20
 IP_CLIENT = "192.168.40.50"
 IP_PROXY_CLIENT = "192.168.40.80"
 IP_PROXY_SERVER = "192.168.30.80"
