@@ -79,31 +79,31 @@ def applyModRequest(packet, chosenAttack, mode):
 
 	if (chosenAttack == ATTACK_FILE_NOT_FOUND and mode == OPCODE_READING) or (chosenAttack == ATTACK_FILE_NOT_FOUND_WRQ and mode == OPCODE_WRITING):
 		packet.filename = FILE_NONEXISTENT
-		print(f"Altered filename = {packet.filename}")
+		print(f"Altered filename = {packet.filename}\n")
 
 	if chosenAttack == ATTACK_ACCESS_VIOLATION and mode == OPCODE_WRITING:
 		packet.filename = FILE_FORBIDDEN
-		print(f"Altered filename = {packet.filename}")
+		print(f"Altered filename = {packet.filename}\n")
 
 	if chosenAttack == ATTACK_ILLEGAL_OP:
 		if mode == OPCODE_READING:
 			packet.op = OPCODE_WRITING
 		else:
 			packet.op = OPCODE_READING
-		print(f"Altered op = {packet.op}")
+		print(f"Altered op = {packet.op}\n")
 
 	if chosenAttack == ATTACK_CHANGE_ACK:
 		if packet.block != 1:
 			packet.block = packet.block - 1
-			print(f"Altered ACK num = {packet.block}")
+			print(f"Altered ACK num = {packet.block}\n")
 
 	if chosenAttack == ATTACK_CHANGE_TXT:
 		packet.load = TEXT_CHANGED
-		print(f"Altered text = {packet.load}")
+		print(f"Altered text = {packet.load}\n")
 
 	if chosenAttack == ATTACK_CHANGE_BLOCK:
 		packet.block = BLOCK_CHANGED
-		print(f"Altered block = {packet.block}")
+		print(f"Altered block = {packet.block}\n")
 
 	return packet
 
@@ -126,9 +126,9 @@ def readingLogic(chosenAttack, data_server_mod, mode, fw_proxy_client, fw_proxy_
 		data_server_mod = applyModRequest(data_server_mod, chosenAttack, mode)
 		data_server_mod_bytes = bytes(data_server_mod)
 		fw_proxy_client.sendto(data_server_mod_bytes, client_address)
-		print(f"Received data from Server: Server = {server_address} | Data = {data_server_mod_bytes}")
+		print(f"\nReceived data from Server: Server = {server_address} | Data = {data_server_mod_bytes}")
 		print(f"Forwarding data to the Client: Client = {client_address}")
-		print(f"Waiting for request re-sending from client")
+		print(f"Waiting for request re-sending from client\n")
 
 		request, client_address = fw_proxy_client.recvfrom(BUFFER_TFTP)
 
@@ -136,8 +136,8 @@ def readingLogic(chosenAttack, data_server_mod, mode, fw_proxy_client, fw_proxy_
 		request_mod_bytes = bytes(request_mod)
 
 		fw_proxy_server.sendto(request_mod_bytes, server_address)
-		print(f"Received RRQ from the Client: Client = {client_address} | Data = {request_mod_bytes}")
-		print(f"Forwarding rrq to the Server: Server = {server_address}")
+		print(f"\nReceived RRQ from the Client: Client = {client_address} | Data = {request_mod_bytes}")
+		print(f"Forwarding rrq to the Server: Server = {server_address}\n")
 
 		tftp_data_packet, server_address = fw_proxy_server.recvfrom(BUFFER_TFTP)
 		data_server_mod = TFTP(tftp_data_packet)
@@ -148,23 +148,23 @@ def readingLogic(chosenAttack, data_server_mod, mode, fw_proxy_client, fw_proxy_
 		# Normal working:
 
 		fw_proxy_client.sendto(data_server_mod_bytes, client_address)
-		print(f"Received data from Server: Server = {server_address} | Data = {data_server_mod_bytes}")
-		print(f"Forwarding data to the Client: Client = {client_address}")
+		print(f"\nReceived data from Server: Server = {server_address} | Data = {data_server_mod_bytes}")
+		print(f"Forwarding data to the Client: Client = {client_address}\n")
 	
 	else:
 		# If we drop a packet, the request is re-sent:
 
-		print(f"Received data from Server: Server = {server_address} | Data = {data_server_mod_bytes}")
+		print(f"\nReceived data from Server: Server = {server_address} | Data = {data_server_mod_bytes}")
 		print(f"Omitting forwarding from server to client")
-		print(f"Waiting for re-sending from client")
+		print(f"Waiting for re-sending from client\n")
 		request, client_address = server_socket.recvfrom(BUFFER_TFTP)
 		request_mod = TFTP(request)
 
 		request_mod_bytes = bytes(request_mod)
 
 		fw_proxy_server.sendto(request_mod_bytes, server_address)
-		print(f"Received RRQ from the Client: Client = {client_address} | Data = {request_mod_bytes}")
-		print(f"Forwarding rrq to the Server: Server = {server_address}")
+		print(f"\nReceived RRQ from the Client: Client = {client_address} | Data = {request_mod_bytes}")
+		print(f"Forwarding rrq to the Server: Server = {server_address}\n")
 
 		tftp_data_packet, server_address = fw_proxy_server.recvfrom(BUFFER_TFTP)
 
@@ -172,8 +172,8 @@ def readingLogic(chosenAttack, data_server_mod, mode, fw_proxy_client, fw_proxy_
 		data_server_mod_bytes = bytes(data_server_mod)
 
 		fw_proxy_client.sendto(data_server_mod_bytes, client_address)
-		print(f"Received data from Server: Server = {server_address} | Data = {data_server_mod_bytes}")
-		print(f"Forwarding data to the Client: Client = {client_address}")
+		print(f"\nReceived data from Server: Server = {server_address} | Data = {data_server_mod_bytes}")
+		print(f"Forwarding data to the Client: Client = {client_address}\n")
 
 	if not (chosenAttack == ATTACK_FILE_NOT_FOUND):
 
@@ -197,56 +197,56 @@ def readingLogic(chosenAttack, data_server_mod, mode, fw_proxy_client, fw_proxy_
 
 			# Normal working with ACK:
 			fw_proxy_server.sendto(ack_server_mod_bytes, server_address)
-			print(f"Received ACK from the Client: Cient = {client_address} | Data = {ack_server_mod_bytes}")
-			print(f"Forwarding ack to the Server: Server = {server_address}")
+			print(f"\nReceived ACK from the Client: Cient = {client_address} | Data = {ack_server_mod_bytes}")
+			print(f"Forwarding ack to the Server: Server = {server_address}\n")
 
 			if chosenAttack == ATTACK_CHANGE_ACK and oldAck != 1:
 				# We change ACK in the second block:
 
-				print(f"Waiting for re-sending from server")
+				print(f"\nWaiting for re-sending from server")
 				tftp_data_packet, server_address = fw_proxy_server.recvfrom(BUFFER_TFTP)
 				tftp_data_packet_mod = TFTP(tftp_data_packet)
 				print(f"Re-sending from server:")
 				print(tftp_data_packet_mod)
-				print(f"Omitting forwarding to client because packet is already there...")
+				print(f"Omitting forwarding to client because packet is already there...\n")
 
 		elif chosenAttack == ATTACK_DROP_ACK:
 
 			# If we drop the ACK, we must wait for a second data package to be sent:
 
-			print(f"Received ACK from the Client: Cient = {client_address} | Data = {ack_server_mod_bytes}")
+			print(f"\nReceived ACK from the Client: Cient = {client_address} | Data = {ack_server_mod_bytes}")
 			print(f"Omitting forwarding from client to server")
-			print(f"Waiting for re-sending from server")
+			print(f"Waiting for re-sending from server\n")
 			tftp_data_packet, server_address = fw_proxy_server.recvfrom(BUFFER_TFTP)
 
 			data_server_mod = TFTP(tftp_data_packet)
 			data_server_mod_bytes = bytes(data_server_mod)
 
 			fw_proxy_client.sendto(data_server_mod_bytes, client_address)
-			print(f"Received data from Server: Server = {server_address} | Data = {data_server_mod_bytes}")
-			print(f"Forwarding data to the Client: Client = {client_address}")
+			print(f"\nReceived data from Server: Server = {server_address} | Data = {data_server_mod_bytes}")
+			print(f"Forwarding data to the Client: Client = {client_address}\n")
 
 			ack_server_mod = TFTP(ack_packet)
 			ack_server_mod_bytes = bytes(ack_server_mod)
 
 			fw_proxy_server.sendto(ack_server_mod_bytes, server_address)
-			print(f"Received ACK from the Client: Cient = {client_address} | Data = {ack_server_mod_bytes}")
-			print(f"Forwarding ack to the Server: Server = {server_address}")
+			print(f"\nReceived ACK from the Client: Cient = {client_address} | Data = {ack_server_mod_bytes}")
+			print(f"Forwarding ack to the Server: Server = {server_address}\n")
 
 		elif chosenAttack == ATTACK_TWICE_ACK:
 
 			# We send two ACK:
 
 			fw_proxy_server.sendto(ack_server_mod_bytes, server_address)
-			print(f"Received first ACK from the Client: Cient = {client_address} | Data = {ack_server_mod_bytes}")
-			print(f"Forwarding first ack to the Server: Server = {server_address}")
+			print(f"\nReceived first ACK from the Client: Cient = {client_address} | Data = {ack_server_mod_bytes}")
+			print(f"Forwarding first ack to the Server: Server = {server_address}\n")
 
 			time.sleep(2) # We wait two seconds to see it clearly
 
 			fw_proxy_server.sendto(ack_server_mod_bytes, server_address)
-			print(f"Received second ACK from the Client: Cient = {client_address} | Data = {ack_server_mod_bytes}")
+			print(f"\nReceived second ACK from the Client: Cient = {client_address} | Data = {ack_server_mod_bytes}")
 			print(f"Forwarding second ack to the Server: Server = {server_address}")
-			print(f"Server does not send answer to second ACK")
+			print(f"Server does not send answer to second ACK\n")
 
 
 
@@ -263,8 +263,8 @@ def writingLogic(chosenAttack, datapacket_client_mod, mode, fw_proxy_client, fw_
 	datapacket_client_mod_bytes = bytes(datapacket_client_mod)
 
 	fw_proxy_server.sendto(datapacket_client_mod_bytes, server_address)
-	print(f"Received Data-Packet from Client: Client = {client_address} | Data = {datapacket_client_mod_bytes}")
-	print(f"Forwarding data to the Server: Server = {server_address}")
+	print(f"\nReceived Data-Packet from Client: Client = {client_address} | Data = {datapacket_client_mod_bytes}")
+	print(f"Forwarding data to the Server: Server = {server_address}\n")
 
 	if not chosenAttack == ATTACK_TWICE_ACK:
 
@@ -281,20 +281,20 @@ def writingLogic(chosenAttack, datapacket_client_mod, mode, fw_proxy_client, fw_
 		if chosenAttack == ATTACK_CHANGE_ACK and oldAck != 1:
 			# We change the ACK in the second block: 
 
-			print(f"Waiting for re-sending from client")
+			print(f"\nWaiting for re-sending from client")
 			tftp_data_packet, server_address = fw_proxy_client.recvfrom(BUFFER_TFTP)
 			tftp_data_packet_mod = TFTP(tftp_data_packet)
 			print(f"Re-sending from client:")
 			print(tftp_data_packet_mod)
 			fw_proxy_client.sendto(ack_server_mod_bytes, client_address)
 			print(f"Received ACK from the Server: Server = {server_address} | Data = {ack_server_mod_bytes}")
-			print(f"Forwarding ack to the Client: Client = {client_address}")
+			print(f"Forwarding ack to the Client: Client = {client_address}\n")
 
 		else:
 			fw_proxy_client.sendto(ack_server_mod_bytes, client_address)
 			fw_proxy_client.sendto(ack_server_mod_bytes, client_address)
-			print(f"Received ACK from the Server: Server = {server_address} | Data = {ack_server_mod_bytes}")
-			print(f"Forwarding ack to the Client: Client = {client_address}")
+			print(f"\nReceived ACK from the Server: Server = {server_address} | Data = {ack_server_mod_bytes}")
+			print(f"Forwarding ack to the Client: Client = {client_address}\n")
 
 
 	else:
@@ -306,11 +306,11 @@ def writingLogic(chosenAttack, datapacket_client_mod, mode, fw_proxy_client, fw_
 		ack_server_mod_bytes = bytes(ack_server_mod)
 
 		fw_proxy_client.sendto(ack_server_mod_bytes, client_address)
-		print(f"Received first ACK from the Server: Server = {server_address} | Data = {ack_server_mod_bytes}")
+		print(f"\nReceived first ACK from the Server: Server = {server_address} | Data = {ack_server_mod_bytes}")
 		print(f"Forwarding first ack to the Client: Client = {client_address}")
 
 		fw_proxy_client.sendto(ack_server_mod_bytes, client_address)
-		print(f"Forwarding second ack to the Client: Client = {client_address}")
+		print(f"Forwarding second ack to the Client: Client = {client_address}\n")
 
 
 
@@ -335,7 +335,7 @@ while True:
 	fw_proxy_server.setsockopt(socket.SOL_SOCKET, 25, str(INTERFACE_NETWORK_PROXY + '\0').encode('utf-8'))
 	fw_proxy_client = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
-	print(f"Waiting for rrq/wrq from client")
+	print(f"Waiting for rrq/wrq from client\n")
 	request, client_address = server_socket.recvfrom(BUFFER_TFTP)
 
 	request_mod = TFTP(request)
@@ -355,8 +355,8 @@ while True:
 		# We receive a RRQ:
 
 		fw_proxy_server.sendto(request_mod_bytes, server_address)
-		print(f"Received RRQ from the Client: Client = {client_address} | Data = {request_mod_bytes}")
-		print(f"Forwarding rrq to the Server: Server = {server_address}")
+		print(f"\nReceived RRQ from the Client: Client = {client_address} | Data = {request_mod_bytes}")
+		print(f"Forwarding rrq to the Server: Server = {server_address}\n")
 
 		tftp_data_packet, server_address = fw_proxy_server.recvfrom(BUFFER_TFTP)
 
@@ -413,36 +413,36 @@ while True:
 
 		# We receive a WRQ:
 
-		print(f"Received WRQ from the Client: Client = {client_address} | Data = {request_mod_bytes}")
+		print(f"\nReceived WRQ from the Client: Client = {client_address} | Data = {request_mod_bytes}")
 
 		if not (chosenAttack == ATTACK_DROP_PACKET):
 			
 			# Normal working:
 			fw_proxy_server.sendto(request_mod_bytes, server_address)
-			print(f"Forwarding wrq to the Server: Server = {server_address}")
+			print(f"Forwarding wrq to the Server: Server = {server_address}\n")
 
 		else:
 
 			# If we drop a packet, we must wait for a second packet to be re-sent:
 
-			print(f"Omitting forwarding to the Server")
+			print(f"\nOmitting forwarding to the Server")
 			print(f"Waiting for re-sending from client")
 			request, client_address = server_socket.recvfrom(BUFFER_TFTP)
 			request_mod = TFTP(request)
 			request_mod_bytes = bytes(request_mod)
 			print(f"Received WRQ from the Client: Client = {client_address} | Data = {request_mod_bytes}")
 			fw_proxy_server.sendto(request_mod_bytes, server_address)
-			print(f"Forwarding wrq to the Server: Server = {server_address}")
+			print(f"Forwarding wrq to the Server: Server = {server_address}\n")
 
 		ack_packet, server_address = fw_proxy_server.recvfrom(BUFFER_TFTP)
 
 		ack_server_mod = TFTP(ack_packet)
 		ack_server_mod_bytes = bytes(ack_server_mod)
 
-		print(f"Received ACK/error from the Server: Server = {server_address} | Data = {ack_server_mod_bytes}")
+		print(f"\nReceived ACK/error from the Server: Server = {server_address} | Data = {ack_server_mod_bytes}")
 
 		fw_proxy_client.sendto(ack_server_mod_bytes, client_address)
-		print(f"Forwarding ack/error to the Client: Client = {client_address}")
+		print(f"Forwarding ack/error to the Client: Client = {client_address}\n")
 
 		if not (chosenAttack == ATTACK_ACCESS_VIOLATION or chosenAttack == ATTACK_FILE_NOT_FOUND_WRQ):
 
