@@ -46,7 +46,7 @@ def showInitialMenu():
 	print("")
 	print("0\tNo error\t\t\tNormal working")
 	print("1\tFile not found (RRQ)\t\tReturn error code 1")
-	print("2\tAccess violation (WRQ)\t\tReturn error code 2")
+	print("2\tAccess violation (WRQ)\t\tReturn error code 0")
 	print("3\tIllegal TFTP op.\t\tServer discards request")
 	print("4\tChange ACK number\t\tOther part retransmits data")
 	print("5\tFile not found (WRQ)\t\tReturn error code 1")
